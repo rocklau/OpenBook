@@ -42,7 +42,6 @@
       line-height: 1.7;
       min-height: 100vh;
       font-size: 15px;
-      overflow-y: auto;
     }
 
 
@@ -60,8 +59,9 @@
 
     .container {
       display: grid;
-      grid-template-columns: 240px 340px 1fr;
+      grid-template-columns: 240px 340px minmax(0, 1fr);
       min-height: 100vh;
+      width: 100%;
     }
 
 
@@ -267,6 +267,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+      min-width: 0;
     }
 
     .content-header {
@@ -369,12 +370,15 @@
       margin-bottom: 1.5rem;
     }
 
-    .content-body img {
-      max-width: 100%;
-      height: auto;
+    .content-body img,
+    .content-body video,
+    .content-body iframe:not(.content-iframe) {
+      max-width: 100% !important;
+      height: auto !important;
       border-radius: 4px;
       margin: 2rem 0;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: block;
     }
 
     .content-body a {
@@ -591,10 +595,125 @@
       gap: 0.5rem;
       box-shadow: var(--shadow);
     }
+
+    /* Hide Mobile UI by default */
+    .mobile-nav,
+    .backdrop {
+      display: none;
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar,
+      .article-list-col {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 1000;
+        width: 85%;
+        max-width: 320px;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar.mobile-open,
+      .article-list-col.mobile-open {
+        transform: translateX(0);
+      }
+
+      .article-list-col {
+        z-index: 1001;
+      }
+
+      .backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(44, 36, 25, 0.4);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .backdrop.show {
+        display: block;
+        opacity: 1;
+      }
+
+      .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1002;
+        background: white;
+        padding: 0.4rem;
+        border-radius: 3rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border: 1px solid var(--border-color);
+        gap: 0.25rem;
+      }
+
+      .mobile-nav-btn {
+        padding: 0.6rem 1rem;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        border-radius: 2rem;
+        font-size: 0.85rem;
+        font-family: var(--font-family);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .mobile-nav-btn.active {
+        background: var(--bg-header);
+        color: white;
+      }
+
+      .content-header {
+        padding: 1rem;
+        padding-top: 2rem;
+      }
+
+      .content-body {
+        padding: 2rem 1rem;
+      }
+
+      .content-title {
+        font-size: 1.2rem;
+      }
+    }
   </style>
 </head>
 
 <body>
+
+  <div class="backdrop" id="backdrop" onclick="closeAllMobile()"></div>
+
+  <div class="mobile-nav">
+    <button class="mobile-nav-btn" onclick="toggleMobileSidebar()" id="btnFeeds">
+      <span>📁</span> Feeds
+    </button>
+    <button class="mobile-nav-btn" onclick="toggleMobileArticleList()" id="btnArticles">
+      <span>📰</span> List
+    </button>
+  </div>
 
   <div class="container">
     <!-- Sidebar: Feeds -->
@@ -651,6 +770,48 @@
     async function init() {
       await loadFeeds();
       await loadArticlesByDate(new Date());
+
+      // Add escape key to close mobile overlays
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllMobile();
+      });
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('backdrop');
+      const btn = document.getElementById('btnFeeds');
+      const isOpen = sidebar.classList.contains('mobile-open');
+
+      closeAllMobile();
+
+      if (!isOpen) {
+        sidebar.classList.add('mobile-open');
+        backdrop.classList.add('show');
+        btn.classList.add('active');
+      }
+    }
+
+    function toggleMobileArticleList() {
+      const list = document.getElementById('articleListCol');
+      const backdrop = document.getElementById('backdrop');
+      const btn = document.getElementById('btnArticles');
+      const isOpen = list.classList.contains('mobile-open');
+
+      closeAllMobile();
+
+      if (!isOpen) {
+        list.classList.add('mobile-open');
+        backdrop.classList.add('show');
+        btn.classList.add('active');
+      }
+    }
+
+    function closeAllMobile() {
+      document.getElementById('sidebar').classList.remove('mobile-open');
+      document.querySelectorAll('.article-list-col').forEach(el => el.classList.remove('mobile-open'));
+      document.getElementById('backdrop').classList.remove('show');
+      document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
     }
 
     // Filter articles by date
@@ -763,7 +924,7 @@
       const filteredFeeds = filterFeedList();
 
       const html = `
-        <li class="feed-item ${isDateFilterMode ? 'active' : ''}" data-index="all" onclick="loadArticlesByDate(new Date())">
+        <li class="feed-item ${isDateFilterMode ? 'active' : ''}" data-index="all" onclick="selectFeed('all')">
           <span class="name">By Date</span>
           <span class="count" id="dateCount">${filterArticlesByDate(new Date()).length}</span>
         </li>
@@ -791,47 +952,50 @@
     async function selectFeed(index) {
       if (index === 'all') {
         loadArticlesByDate(new Date());
-        return;
+      } else {
+        currentFeed = index;
+        currentArticle = null;
+        isDateFilterMode = false;
+        renderFeedList();
+
+        const listSubtitle = document.getElementById('listSubtitle');
+        const articleList = document.getElementById('articleList');
+        const contentCol = document.getElementById('contentCol');
+
+        // Reset date display to show feed name
+        document.getElementById('currentDate').textContent = feeds[index].name;
+
+        const feed = feeds[index];
+        listSubtitle.textContent = 'Loading...';
+        articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
+
+        try {
+          const res = await fetch(`/api/feed/${index}`);
+          const parsed = await res.json();
+          currentArticles = parsed.items.map(item => ({
+            ...item,
+            feedTitle: parsed.title,
+            feedName: feed.name
+          }));
+          listSubtitle.textContent = `${currentArticles.length} articles`;
+          renderArticleList(currentArticles);
+        } catch (err) {
+          articleList.innerHTML = `<li class="error">Failed to load: ${err.message}</li>`;
+        }
+
+        // Clear content area
+        contentCol.innerHTML = `
+          <div class="empty-state">
+            <h3>Select an Article</h3>
+            <p>Choose an article from the list to view its content</p>
+          </div>
+        `;
       }
 
-      currentFeed = index;
-      currentArticle = null;
-      isDateFilterMode = false;
-      renderFeedList();
-
-      const listSubtitle = document.getElementById('listSubtitle');
-      const articleList = document.getElementById('articleList');
-      const contentCol = document.getElementById('contentCol');
-
-      // Reset date display to show feed name
-      document.getElementById('currentDate').textContent = feeds[index].name;
-
-      const feed = feeds[index];
-      listSubtitle.textContent = 'Loading...';
-      articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
-
-      try {
-        const res = await fetch(`/api/feed/${index}`);
-        const parsed = await res.json();
-        currentArticles = parsed.items.map(item => ({
-          ...item,
-          feedTitle: parsed.title,
-          feedName: feed.name
-        }));
-        listSubtitle.textContent = `${currentArticles.length} articles`;
-        renderArticleList(currentArticles);
-      } catch (err) {
-        articleList.innerHTML = `<li class="error">Failed to load: ${err.message}</li>`;
+      if (window.innerWidth <= 768) {
+        // Switch to list view on mobile
+        toggleMobileArticleList();
       }
-
-      // Clear content area
-      contentCol.innerHTML = `
-        <div class="empty-state">
-          <h3>Select an Article</h3>
-          <p>Choose an article from the list to view its content</p>
-        </div>
-      `;
-
     }
 
     // Render article list
@@ -870,6 +1034,10 @@
       element.classList.add('active');
 
       renderArticleContent(currentArticle);
+
+      if (window.innerWidth <= 768) {
+        closeAllMobile();
+      }
 
     }
 
