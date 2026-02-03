@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RSS Reader</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Indie Style - Warm, minimal, literary */
+      --bg-primary: #f7f3ed;
+      --bg-secondary: #faf8f5;
+      --bg-sidebar: #faf8f5;
+      --bg-header: #2c2419;
+      --text-primary: #2c2419;
+      --text-secondary: #5c4d3c;
+      --text-muted: #8b7d6b;
+      --accent-color: #8b6914;
+      --accent-hover: #6b5110;
+      --border-color: #e8e2d9;
+      --shadow: 0 1px 3px rgba(44, 36, 25, 0.06);
+      --item-hover: #f2ede6;
+      --item-active: #ebe5dc;
+      --font-family: 'Georgia', 'Times New Roman', 'Songti SC', 'SimSun', serif;
+    }
+
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      min-height: 100vh;
+      font-size: 15px;
+      overflow-y: auto;
+    }
+
+
+    .header h1 {
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: none;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 240px 340px 1fr;
+      min-height: 100vh;
+    }
+
+
+    .sidebar {
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header h2 {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.75rem;
+      font-weight: 400;
+    }
+
+    .feed-search {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      outline: none;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+    }
+
+    .feed-search:focus {
+      border-color: var(--accent-color);
+    }
+
+    .feed-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+      padding: 0.75rem;
+    }
+
+    .feed-item {
+      padding: 0.6rem 0.5rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid transparent;
+    }
+
+    .feed-item:hover {
+      color: var(--accent-color);
+    }
+
+    .feed-item.active {
+      color: var(--accent-color);
+      font-weight: 500;
+    }
+
+    .feed-item .name {
+      flex: 1;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .feed-item .count {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .sidebar-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .article-list-col {
+      background: var(--bg-primary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .article-list-header {
+      padding: 1.5rem;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .article-list-header h3 {
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .article-list-header .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .date-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .date-nav-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .date-nav-btn:hover {
+      background: var(--item-hover);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .current-date {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+    }
+
+    .article-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .article-item {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--bg-primary);
+    }
+
+    .article-item:hover {
+      background: var(--item-hover);
+    }
+
+    .article-item.active {
+      background: var(--item-active);
+    }
+
+    .article-item-title {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      line-height: 1.5;
+      margin-bottom: 0.4rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-weight: 400;
+    }
+
+    .article-item-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    .content-col {
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .content-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      background: var(--bg-secondary);
+    }
+
+    .content-title-section {
+      flex: 1;
+    }
+
+    .content-title {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+
+    .content-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .content-title a:hover {
+      color: var(--accent-color);
+    }
+
+    .content-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    .content-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+      color: var(--text-secondary);
+      font-family: var(--font-family);
+      letter-spacing: 0.03em;
+    }
+
+    .icon-btn:hover {
+      background: var(--item-hover);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .content-body {
+      padding: 3rem 2rem;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      color: var(--text-primary);
+      width: 100%;
+    }
+
+    .content-body-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .content-body h1 {
+      font-size: 2rem;
+      line-height: 1.3;
+      margin: 2rem 0 1.5rem;
+    }
+
+    .content-body h2 {
+      font-size: 1.6rem;
+      line-height: 1.4;
+      margin: 2rem 0 1rem;
+      font-weight: 500;
+    }
+
+    .content-body h3 {
+      font-size: 1.3rem;
+      margin: 1.5rem 0 1rem;
+    }
+
+    .content-body p {
+      margin-bottom: 1.5rem;
+    }
+
+    .content-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin: 2rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .content-body a {
+      color: var(--accent-color);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+
+    .content-body a:hover {
+      color: var(--accent-hover);
+    }
+
+    .content-body blockquote {
+      border-left: 2px solid var(--accent-color);
+      padding: 0.5rem 0 0.5rem 1.5rem;
+      margin: 2rem 0;
+      color: var(--text-secondary);
+      font-style: italic;
+      font-size: 1.15rem;
+    }
+
+    .content-body pre {
+      background: #fdfcfb;
+      padding: 1.25rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 2rem 0;
+      border: 1px solid var(--border-color);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .content-body code {
+      background: rgba(139, 105, 20, 0.08);
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+      color: var(--accent-color);
+    }
+
+    /* iframe embed styles */
+    .content-iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      background: var(--bg-primary);
+    }
+
+    .iframe-notice {
+      background: var(--item-active);
+      border-left: 2px solid var(--accent-color);
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .iframe-notice a {
+      color: var(--accent-color);
+      text-decoration: none;
+    }
+
+    .iframe-notice a:hover {
+      text-decoration: underline;
+    }
+
+    .external-link-btn {
+      background: transparent;
+      color: var(--accent-color);
+      border: 1px solid var(--accent-color);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      margin-top: 1rem;
+      font-family: var(--font-family);
+      letter-spacing: 0.03em;
+    }
+
+    .external-link-btn:hover {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 0.25rem;
+      background: var(--bg-primary);
+      padding: 0.25rem;
+      border-radius: 6px;
+    }
+
+    .view-toggle-btn {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .view-toggle-btn.active {
+      background: var(--bg-secondary);
+      color: var(--accent-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* iframe error state */
+    .iframe-error {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-secondary);
+      margin: 1rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .empty-state h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    .empty-state p {
+      font-size: 0.8rem;
+    }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      border: 3px solid var(--bg-primary);
+      border-top: 3px solid var(--accent-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Error message */
+    .error {
+      background: #fef5f5;
+      color: #c33;
+      padding: 1rem;
+      margin: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      border: 1px solid #fcc;
+    }
+
+    /* Scrollbar styles */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .read-mode-indicator {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: var(--bg-header);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: var(--shadow);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <!-- Sidebar: Feeds -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Feeds</h2>
+        <input type="text" class="feed-search" placeholder="Search feeds..." id="feedSearch" oninput="filterFeeds()">
+      </div>
+      <ul class="feed-list" id="feedList">
+
+      </ul>
+      <div class="sidebar-footer">
+        <span id="feedStats">Loading...</span>
+      </div>
+    </aside>
+
+    <!-- Article List -->
+    <section class="article-list-col" id="articleListCol">
+      <div class="article-list-header">
+        <div class="date-nav">
+          <button class="date-nav-btn" onclick="changeDate(-1)" title="Previous day">←</button>
+          <span class="current-date" id="currentDate">Today</span>
+          <button class="date-nav-btn" onclick="changeDate(1)" title="Next day">→</button>
+        </div>
+        <div class="subtitle" id="listSubtitle">0 articles</div>
+      </div>
+      <ul class="article-list" id="articleList">
+        <li class="empty-state">
+          <h3>No articles</h3>
+          <p>Select a feed to view articles</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Content -->
+    <section class="content-col" id="contentCol">
+      <div class="empty-state">
+        <h3>Select an Article</h3>
+        <p>Choose an article from the list to view its content</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let feeds = [];
+    let articles = [];
+    let currentFeed = 'all';
+    let currentArticle = null;
+    let currentArticles = [];
+    let currentDate = new Date();
+    let isDateFilterMode = true;
+
+    // Initialize
+    async function init() {
+      await loadFeeds();
+      await loadArticlesByDate(new Date());
+    }
+
+    // Filter articles by date
+    function filterArticlesByDate(date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      return articles.filter(article => {
+        if (!article.pubDate) return false;
+        const articleDate = new Date(article.pubDate);
+        return articleDate >= startOfDay && articleDate <= endOfDay;
+      });
+    }
+
+    // Load articles for a specific date
+    async function loadArticlesByDate(date) {
+      currentDate = date;
+      isDateFilterMode = true;
+      currentFeed = 'date';
+
+      const articleList = document.getElementById('articleList');
+      articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
+
+      // Update date display
+      updateDateDisplay();
+
+      try {
+        // Use the date-specific API endpoint
+        const dateStr = date.toISOString().split('T')[0];
+        const res = await fetch(`/api/articles/by-date?date=${dateStr}`);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        currentArticles = await res.json();
+
+        // Also update the global articles cache if empty
+        if (articles.length === 0) {
+          articles = currentArticles;
+        }
+
+        document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
+        renderArticleList(currentArticles);
+        renderFeedList();
+      } catch (err) {
+        console.error('Failed to load articles:', err);
+        articleList.innerHTML = `
+          <li class="empty-state">
+            <h3>Failed to load</h3>
+            <p>${err.message}</p>
+          </li>
+        `;
+      }
+    }
+
+    // Update the date display in header
+    function updateDateDisplay() {
+      const dateEl = document.getElementById('currentDate');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const selectedDate = new Date(currentDate);
+      selectedDate.setHours(0, 0, 0, 0);
+
+      if (selectedDate.getTime() === today.getTime()) {
+        dateEl.textContent = 'Today';
+      } else if (selectedDate.getTime() === yesterday.getTime()) {
+        dateEl.textContent = 'Yesterday';
+      } else {
+        dateEl.textContent = selectedDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          weekday: 'short'
+        });
+      }
+    }
+
+    // Change date (delta: -1 for previous, +1 for next)
+    function changeDate(delta) {
+      const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() + delta);
+      loadArticlesByDate(newDate);
+    }
+
+    async function loadFeeds() {
+      try {
+        const res = await fetch('/api/feeds');
+        feeds = await res.json();
+        renderFeedList();
+      } catch (err) {
+      }
+    }
+
+    function renderFeedList() {
+      const list = document.getElementById('feedList');
+      const articleCounts = {};
+
+      articles.forEach(a => {
+        const feedName = a.feedName || a.feedTitle;
+        articleCounts[feedName] = (articleCounts[feedName] || 0) + 1;
+      });
+
+      const filteredFeeds = filterFeedList();
+
+      const html = `
+        <li class="feed-item ${isDateFilterMode ? 'active' : ''}" data-index="all" onclick="loadArticlesByDate(new Date())">
+          <span class="name">By Date</span>
+          <span class="count" id="dateCount">${filterArticlesByDate(new Date()).length}</span>
+        </li>
+        ${filteredFeeds.map((feed, i) => `
+          <li class="feed-item ${!isDateFilterMode && currentFeed === i ? 'active' : ''}" data-index="${i}" onclick="selectFeed(${i})">
+            <span class="name">${escapeHtml(feed.name)}</span>
+          </li>
+        `).join('')}
+      `;
+      list.innerHTML = html;
+
+      document.getElementById('feedStats').textContent = `${feeds.length} feeds · ${articles.length} articles`;
+    }
+
+    function filterFeedList() {
+      const search = document.getElementById('feedSearch').value.toLowerCase();
+      if (!search) return feeds;
+      return feeds.filter(f => f.name.toLowerCase().includes(search));
+    }
+
+    function filterFeeds() {
+      renderFeedList();
+    }
+
+    async function selectFeed(index) {
+      if (index === 'all') {
+        loadArticlesByDate(new Date());
+        return;
+      }
+
+      currentFeed = index;
+      currentArticle = null;
+      isDateFilterMode = false;
+      renderFeedList();
+
+      const listSubtitle = document.getElementById('listSubtitle');
+      const articleList = document.getElementById('articleList');
+      const contentCol = document.getElementById('contentCol');
+
+      // Reset date display to show feed name
+      document.getElementById('currentDate').textContent = feeds[index].name;
+
+      const feed = feeds[index];
+      listSubtitle.textContent = 'Loading...';
+      articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
+
+      try {
+        const res = await fetch(`/api/feed/${index}`);
+        const parsed = await res.json();
+        currentArticles = parsed.items.map(item => ({
+          ...item,
+          feedTitle: parsed.title,
+          feedName: feed.name
+        }));
+        listSubtitle.textContent = `${currentArticles.length} articles`;
+        renderArticleList(currentArticles);
+      } catch (err) {
+        articleList.innerHTML = `<li class="error">Failed to load: ${err.message}</li>`;
+      }
+
+      // Clear content area
+      contentCol.innerHTML = `
+        <div class="empty-state">
+          <h3>Select an Article</h3>
+          <p>Choose an article from the list to view its content</p>
+        </div>
+      `;
+
+    }
+
+    // Render article list
+    function renderArticleList(items) {
+      const list = document.getElementById('articleList');
+
+      if (items.length === 0) {
+        list.innerHTML = `
+          <li class="empty-state">
+            <h3>No articles</h3>
+          </li>
+        `;
+        return;
+      }
+
+      list.innerHTML = items.map((item, index) => `
+        <li class="article-item ${currentArticle?.link === item.link ? 'active' : ''}" onclick="selectArticle(${index}, this)">
+          <div class="article-item-title">${escapeHtml(item.title)}</div>
+          <div class="article-item-meta">
+            <span>${escapeHtml(item.feedTitle || item.feedName || 'Unknown')}</span>
+            <span>${formatDate(item.pubDate)}</span>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    function selectArticle(index, element) {
+      currentArticle = currentArticles[index];
+
+      if (!currentArticle) {
+        console.error('Article not found');
+        return;
+      }
+
+      document.querySelectorAll('.article-item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+
+      renderArticleContent(currentArticle);
+
+    }
+
+    function renderArticleContent(article, forceView = null) {
+      const contentCol = document.getElementById('contentCol');
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Global scroll to top
+      const hasFullContent = article.content || article['content:encoded'];
+      const hasSnippet = article.contentSnippet && article.contentSnippet.length > 50;
+
+      let viewMode = forceView;
+      if (!viewMode) {
+        viewMode = hasFullContent ? 'content' : 'iframe';
+      }
+
+
+      if (viewMode === 'iframe') {
+        contentCol.innerHTML = `
+          <iframe class="content-iframe" src="${article.link}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" onerror="iframeError(this)"></iframe>
+        `;
+      } else {
+        contentCol.innerHTML = `
+          <div class="content-body">
+            <div class="content-body-inner">
+              ${article.content || article['content:encoded']}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function iframeError(iframe) {
+      iframe.style.display = 'none';
+      iframe.parentElement.innerHTML += `
+        <div class="empty-state">
+          <h3>Cannot embed this page</h3>
+          <p>This website does not allow iframe embedding. Please open in new tab.</p>
+        </div>
+      `;
+    }
+
+    function copyLink(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Link copied to clipboard');
+      });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'Unknown';
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+      if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
+
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+
+    init();
+  </script>
+</body>
+
+</html>

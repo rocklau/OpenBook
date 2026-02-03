@@ -1,0 +1,20 @@
+{
+  "name": "rss-reader",
+  "version": "1.0.0",
+  "description": "A simple RSS reader with CLI and Web interface",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node cli.js",
+    "dev": "nodemon server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "rss-parser": "^3.13.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

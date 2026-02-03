@@ -2,6 +2,8 @@
 
 A clean, indie-style RSS reader built with Node.js, featuring both CLI and Web interfaces.
 
+![OpenBook Interface](./image.png)
+
 ## Features
 
 - Multiple RSS feed subscriptions
