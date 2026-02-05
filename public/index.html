@@ -324,6 +324,11 @@
       background: var(--item-active);
     }
 
+    .article-item.is-read .article-item-title {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
     .article-item-title {
       font-size: 0.9rem;
       color: var(--text-primary);
@@ -634,15 +639,80 @@
       }
     }
 
-    /* Error message */
-    .error {
-      background: #fef5f5;
-      color: #c33;
-      padding: 1rem;
-      margin: 1rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      border: 1px solid #fcc;
+    /* Better Note Editor Styling */
+    .note-editor-container {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      max-width: 720px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      display: none;
+      z-index: 100;
+      margin-top: 10px;
+    }
+
+    .note-editor-container.active {
+      display: block;
+    }
+
+    .note-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .note-editor-header h4 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+    }
+
+    .note-editor-textarea {
+      width: 100%;
+      min-height: 120px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 0.75rem;
+      font-family: var(--font-family);
+      font-size: 1rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      background: #fafafa;
+      transition: border-color 0.2s;
+    }
+
+    .note-editor-textarea:focus {
+      border-color: var(--accent-color);
+      background: #fff;
+    }
+
+    .note-editor-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Scrollbar styles */
@@ -1152,9 +1222,10 @@
       }
 
       list.innerHTML = items.map((item, index) => `
-        <li class="article-item ${currentArticle?.link === item.link ? 'active' : ''}" onclick="selectArticle(${index}, this)">
+        <li class="article-item ${currentArticle?.link === item.link ? 'active' : ''} ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${index}, this)">
           <div class="article-item-title">${escapeHtml(item.title)}</div>
           <div class="article-item-meta">
+            ${item.isFavorite ? '<span style="color:#d4af37">⭐</span>' : ''}
             <span>${escapeHtml(item.feedTitle || item.feedName || 'Unknown')}</span>
             <span>${formatDate(item.pubDate)}</span>
           </div>
@@ -1175,10 +1246,18 @@
 
       renderArticleContent(currentArticle);
 
+      // Auto mark as read if not already
+      if (!currentArticle.isRead && currentArticle.id) {
+        currentArticle.isRead = true;
+        element.classList.add('is-read');
+        apiPost('/api/article/state', { articleId: currentArticle.id, isRead: true }).catch(err => {
+          console.error('Failed to auto-mark read:', err);
+        });
+      }
+
       if (window.innerWidth <= 768) {
         closeAllMobile();
       }
-
     }
 
     function renderArticleContent(article, forceView = null) {
@@ -1192,16 +1271,26 @@
         <div class="actionbar">
           <div class="actionbar-inner">
             <div class="actionbar-left">
-              <button class="action-btn" onclick="markReadCurrent()" title="Mark read">Read</button>
-              <button class="action-btn" onclick="toggleFavoriteCurrent()" title="Favorite">Favorite</button>
-              <button class="action-btn" onclick="createNoteForCurrent()" title="New note">Note</button>
-              <button class="action-btn" onclick="saveFullToMarkdown()" title="Save full article to Markdown">Save</button>
+              <button class="action-btn" onclick="toggleFavoriteCurrent()" title="Favorite and archive">⭐</button>
+              <button class="action-btn" onclick="createNoteForCurrent()" title="New note and archive">📝</button>
             </div>
             <div class="actionbar-right">
               <a class="action-link" href="/notes.html">Notes</a>
             </div>
           </div>
           <button class="highlight-pop" id="highlightBtn" onclick="clipSelectionToNote()" style="display:none" title="Save selection as highlight">Highlight</button>
+          
+          <div class="note-editor-container" id="noteEditor">
+            <div class="note-editor-header">
+              <h4>New Note</h4>
+              <span style="font-size:0.7rem; color:var(--text-muted);">Automatically mark as read and archive</span>
+            </div>
+            <textarea class="note-editor-textarea" id="noteTextarea" placeholder="Enter your thoughts here... (Markdown supported)"></textarea>
+            <div class="note-editor-footer">
+              <button class="action-btn" onclick="closeNoteEditor()" style="background:transparent; border-color:transparent; color:var(--text-muted);">Cancel</button>
+              <button class="action-btn" onclick="saveNoteFromEditor()" id="saveNoteBtn">Save Note</button>
+            </div>
+          </div>
         </div>
       `;
 
@@ -1218,11 +1307,11 @@
       } else {
         const raw = article.content || article['content:encoded'] || '';
         contentCol.innerHTML = actionsHtml + `
-          <div class="content-body">
-            <div class="content-body-inner" id="contentBodyInner">
-              ${sanitizeHtml(raw)}
-            </div>
+        <div class="content-body">
+          <div class="content-body-inner" id="contentBodyInner">
+            ${sanitizeHtml(raw)}
           </div>
+        </div>
         `;
         // Enable selection highlight popover in content mode
         setupHighlightPopover(document.getElementById('contentBodyInner'));
@@ -1289,7 +1378,7 @@
     async function apiPost(url, body) {
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status} `);
       return data;
     }
 
@@ -1299,13 +1388,54 @@
       return null;
     }
 
-    async function markReadCurrent() {
+
+    let isNoteEditorOpen = false;
+
+    function openNoteEditor() {
+      const editor = document.getElementById('noteEditor');
+      if (!editor) return;
+      editor.classList.add('active');
+      document.getElementById('noteTextarea').focus();
+      isNoteEditorOpen = true;
+    }
+
+    function closeNoteEditor() {
+      const editor = document.getElementById('noteEditor');
+      if (editor) editor.classList.remove('active');
+      const textarea = document.getElementById('noteTextarea');
+      if (textarea) textarea.value = '';
+      isNoteEditorOpen = false;
+    }
+
+    async function saveNoteFromEditor() {
+      const textarea = document.getElementById('noteTextarea');
+      const content = textarea.value.trim();
+      if (!content) {
+        showToast('Content cannot be empty', '⚠️');
+        return;
+      }
+
       if (!currentArticle) return;
-      // If we don't know articleId, we materialize first (cheap for RSS full-content sites; for others it's real fetch).
-      const r = await saveFullToMarkdown({ silent: true });
-      if (r && r.articleId) {
+
+      const btn = document.getElementById('saveNoteBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        const r = await saveFullToMarkdown({ silent: true });
+        if (!r || !r.articleId) throw new Error('Failed to materialize article');
+
         await apiPost('/api/article/state', { articleId: r.articleId, isRead: true });
-        showToast('Marked as read', '📖');
+        await apiPost('/api/article/note', { articleId: r.articleId, title: 'Note', content });
+
+        showToast('Note saved', '📝');
+        closeNoteEditor();
+      } catch (err) {
+        showToast('Save failed: ' + err.message, '❌');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     }
 
@@ -1313,19 +1443,15 @@
       if (!currentArticle) return;
       const r = await saveFullToMarkdown({ silent: true });
       if (r && r.articleId) {
-        await apiPost('/api/article/state', { articleId: r.articleId, isFavorite: true });
-        showToast('Added to favorites', '⭐');
+        // Favoriting also implies reading/processing
+        await apiPost('/api/article/state', { articleId: r.articleId, isFavorite: true, isRead: true });
+        showToast('Added to favorites and archived', '⭐');
       }
     }
 
     async function createNoteForCurrent() {
       if (!currentArticle) return;
-      const r = await saveFullToMarkdown({ silent: true });
-      if (!r || !r.articleId) return;
-      const content = prompt('Write a quick note (Markdown):', '');
-      if (content == null) return;
-      await apiPost('/api/article/note', { articleId: r.articleId, title: 'Note', content });
-      showToast('Note saved', '📝');
+      openNoteEditor();
     }
 
     async function saveFullToMarkdown(opts = {}) {
@@ -1358,7 +1484,7 @@
       const r = await saveFullToMarkdown({ silent: true });
       if (!r || !r.articleId) return;
       const quote = sel.trim().split('\n').map(l => '> ' + l).join('\n');
-      const content = `${quote}\n\n— ${currentArticle.link}\n`;
+      const content = `${quote} \n\n— ${currentArticle.link} \n`;
       await apiPost('/api/article/note', { articleId: r.articleId, title: 'Highlight', content });
       // Hide popover and clear selection
       const hb = document.getElementById('highlightBtn');
@@ -1404,30 +1530,59 @@
     }
 
     // Notes -> Reader deep link support
+    // Unified hash-based router for deep linking
     async function openFromHash() {
       const h = location.hash || '';
       if (!h.startsWith('#open=')) return;
+
       const link = decodeURIComponent(h.slice('#open='.length));
       if (!link) return;
+
+      console.log('[Reader] Deep link open requested:', link);
+
       try {
-        const list = await fetch('/api/articles?limit=200').then(r => r.json());
-        const found = list.find(a => a.link === link);
+        // Try current articles first
+        let found = currentArticles.find(a => a.link === link);
+
+        if (!found) {
+          // Try fetching recent ones
+          const list = await fetch('/api/articles?limit=250').then(r => r.json());
+          found = list.find(a => a.link === link);
+        }
+
         if (found) {
           currentArticles = [found];
           currentArticle = found;
           renderArticleList(currentArticles);
           renderArticleContent(found);
+
+          // Switch view state so UI looks consistent
+          isDateFilterMode = false;
+          currentFeed = 'date'; // or some specific state
+          document.getElementById('currentDate').textContent = 'Opened link';
           return;
         }
-      } catch { }
 
-      // Fallback: open directly as iframe
-      const fallback = { title: link, link, pubDate: new Date().toISOString(), feedName: 'Link' };
-      currentArticles = [fallback];
-      currentArticle = fallback;
-      renderArticleList(currentArticles);
-      renderArticleContent(fallback, 'iframe');
+        // Fallback: iframe mode for unknown links
+        const fallback = {
+          title: link,
+          link,
+          pubDate: new Date().toISOString(),
+          feedName: 'External Link',
+          isRead: true
+        };
+        currentArticles = [fallback];
+        currentArticle = fallback;
+        renderArticleList(currentArticles);
+        renderArticleContent(fallback, 'iframe');
+        document.getElementById('currentDate').textContent = 'Direct Open';
+      } catch (err) {
+        console.error('[Reader] Hash open failed:', err);
+      }
     }
+
+    // Listen for hash changes to support navigation while index.html is already open
+    window.addEventListener('hashchange', openFromHash);
 
     const _init = init;
     init = async function () {

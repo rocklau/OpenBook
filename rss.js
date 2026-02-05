@@ -171,7 +171,8 @@ class RSSReader {
           pubDate: item.pubDate || item.isoDate,
           content: item['content:encoded'] || item.content,
           contentSnippet: item.contentSnippet,
-          author: item.author || item.creator
+          author: item.author || item.creator,
+          feedUrl: url
         }))
       };
 
@@ -198,7 +199,8 @@ class RSSReader {
           allArticles.push({
             ...item,
             feedTitle: parsed.title,
-            feedName: feed.name
+            feedName: feed.name,
+            feedUrl: feed.url
           });
         });
       });

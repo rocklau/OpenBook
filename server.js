@@ -5,10 +5,11 @@ const fs = require('fs');
 const { RSSReader } = require('./rss');
 const { readJsonIndex, writeJsonIndex } = require('./storage');
 const { stableId, safeFileName } = require('./utils');
-const { ensureDir, ARTICLES_DIR, NOTES_DIR, openDb, migrate } = require('./storage');
+const { ensureDir, ARTICLES_DIR, NOTES_DIR, openDb, migrate, DATA_DIR } = require('./storage');
 const { queuedFetch } = require('./http');
 const { htmlToMarkdown } = require('./html_to_md');
 const { ACTIVITY_TYPES } = require('./activity');
+const { downloadResources } = require('./collector');
 
 
 const app = express();
@@ -17,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static('public'));
+app.use('/data', express.static(DATA_DIR));
 
 const reader = new RSSReader();
 
@@ -47,6 +49,7 @@ const stmtSetState = featureDb.prepare(`
 `);
 
 const stmtGetState = featureDb.prepare('SELECT is_read, is_favorite, updated_at FROM article_state WHERE article_id=?');
+const stmtGetArticle = featureDb.prepare('SELECT * FROM articles WHERE id=?');
 const stmtInsertNote = featureDb.prepare('INSERT INTO article_notes(article_id, note_path) VALUES (?, ?)');
 const stmtListNotes = featureDb.prepare('SELECT id, note_path, created_at FROM article_notes WHERE article_id=? ORDER BY id DESC');
 
@@ -61,12 +64,48 @@ const stmtGetActivity = featureDb.prepare(`
   LIMIT ? OFFSET ?
 `);
 
+/**
+ * Helper to ensure articles are in DB and decorated with IDs and State
+ */
+function processArticles(articles) {
+  for (const a of articles) {
+    const feedUrl = a.feedUrl || (reader.feeds.find(f => f.name === (a.feedName || a.feedTitle)) || {}).url;
+
+    if (!feedUrl) {
+      console.error(`[Server] Skipping article because feed URL could not be determined: ${a.title}`);
+      continue;
+    }
+
+    const id = stableId(feedUrl, a.guid || a.link || a.title);
+    a.id = id;
+
+    // Upsert metadata
+    stmtUpsertArticle.run({
+      id,
+      feed_url: feedUrl,
+      guid: a.guid || null,
+      link: a.link || null,
+      title: a.title || null,
+      author: a.author || null,
+      published_at: a.pubDate || null,
+      content_html: a.content || a['content:encoded'] || null,
+      content_snippet: a.contentSnippet || null,
+      markdown_path: null
+    });
+
+    // Attach state
+    const state = stmtGetState.get(id);
+    a.isRead = !!state?.is_read;
+    a.isFavorite = !!state?.is_favorite;
+  }
+}
+
 
 
 async function initFeeds() {
   const files = fs.readdirSync('.');
   const opmlFiles = files.filter(f => f.endsWith('.opml'));
-  
+
   for (const file of opmlFiles) {
     const content = fs.readFileSync(file, 'utf-8');
     await reader.loadFromOPML(content);
@@ -80,7 +119,7 @@ async function initFeeds() {
       console.error('Failed to add default feeds:', e.message);
     }
   }
-  
+
   console.log(`Loaded ${reader.feeds.length} RSS feeds`);
 }
 
@@ -115,23 +154,7 @@ app.get('/api/articles', async (req, res) => {
     writeJsonIndex(index);
 
     // Persist into SQLite index
-    for (const a of articles) {
-      const feedUrl = (reader.feeds.find(f => f.name === (a.feedName || a.feedTitle)) || {}).url || '';
-      const id = stableId(feedUrl || (a.feedName || a.feedTitle || ''), a.guid || a.link || a.title);
-      stmtUpsertArticle.run({
-        id,
-        feed_url: feedUrl || (a.feedName || a.feedTitle || ''),
-        guid: a.guid || null,
-        link: a.link || null,
-        title: a.title || null,
-        author: a.author || null,
-        published_at: a.pubDate || null,
-        content_html: a.content || a['content:encoded'] || null,
-        content_snippet: a.contentSnippet || null,
-        markdown_path: null
-      });
-    }
-
+    processArticles(articles);
     res.json(articles);
   } catch (error) {
     console.error('Error fetching articles:', error);
@@ -144,12 +167,13 @@ app.get('/api/articles/by-date', async (req, res) => {
   try {
     const dateParam = req.query.date;
     const date = dateParam ? new Date(dateParam) : new Date();
-    
+
     if (isNaN(date.getTime())) {
       return res.status(400).json({ error: 'Invalid date' });
     }
-    
+
     const articles = await reader.getArticlesByDate(date);
+    processArticles(articles);
     res.json(articles);
   } catch (error) {
     console.error('Error fetching articles by date:', error);
@@ -163,14 +187,15 @@ app.get('/api/feed/:index', async (req, res) => {
     if (index < 0 || index >= reader.feeds.length) {
       return res.status(404).json({ error: 'Feed not found' });
     }
-    
+
     const feed = reader.feeds[index];
     const parsed = await reader.parseFeed(feed.url);
-    
+
     if (!parsed) {
       return res.status(500).json({ error: 'Failed to parse feed' });
     }
-    
+
+    processArticles(parsed.items);
     res.json(parsed);
   } catch (error) {
     console.error('Error parsing feed:', error);
@@ -233,10 +258,18 @@ app.post('/api/article/materialize', async (req, res) => {
     const md = `---\n${yaml}\n---\n\n${mdBody}\n`;
     fs.writeFileSync(filePath, md, 'utf-8');
 
-    const articleId = stableId(feedUrl || u.hostname, u.toString());
+    const articleFeedUrl = feedUrl || u.origin;
+
+    // Ensure the feed exists in DB to satisfy foreign key (articles -> feeds)
+    const stmtCheckFeed = featureDb.prepare('SELECT 1 FROM feeds WHERE url = ?');
+    if (!stmtCheckFeed.get(articleFeedUrl)) {
+      featureDb.prepare('INSERT OR IGNORE INTO feeds(url, name) VALUES (?, ?)').run(articleFeedUrl, u.hostname);
+    }
+
+    const articleId = stableId(articleFeedUrl, u.toString());
     stmtUpsertArticle.run({
       id: articleId,
-      feed_url: feedUrl || u.hostname,
+      feed_url: articleFeedUrl,
       guid: null,
       link: u.toString(),
       title: title || null,
@@ -246,6 +279,14 @@ app.post('/api/article/materialize', async (req, res) => {
       content_snippet: null,
       markdown_path: filePath
     });
+
+    // If this article is already favorited, trigger resource download
+    const state = stmtGetState.get(articleId);
+    if (state && state.is_favorite) {
+      downloadResources(filePath, articleId).catch(err => {
+        console.error(`[Server] Error downloading resources for favorited article ${articleId} during materialize:`, err);
+      });
+    }
 
     // Activity log
     stmtLogActivity.run(ACTIVITY_TYPES.MATERIALIZE, articleId, JSON.stringify({ url: u.toString(), markdownPath: filePath, title: title || null }));
@@ -268,6 +309,17 @@ app.post('/api/article/state', (req, res) => {
     const nextFav = typeof isFavorite === 'boolean' ? (isFavorite ? 1 : 0) : existing.is_favorite;
 
     stmtSetState.run(articleId, nextRead, nextFav);
+
+    // If favorited, try to download resources in the markdown file
+    if (nextFav && !existing.is_favorite) {
+      const article = stmtGetArticle.get(articleId);
+      if (article && article.markdown_path) {
+        downloadResources(article.markdown_path, articleId).catch(err => {
+          console.error(`[Server] Error downloading resources for ${articleId}:`, err);
+        });
+      }
+    }
+
     stmtLogActivity.run(
       ACTIVITY_TYPES.STATE,
       articleId,
@@ -398,7 +450,7 @@ app.get('/api/export/markdown', (req, res) => {
 
     for (const r of rows) {
       let payload = {};
-      try { payload = r.payload_json ? JSON.parse(r.payload_json) : {}; } catch {}
+      try { payload = r.payload_json ? JSON.parse(r.payload_json) : {}; } catch { }
 
       const type = r.type;
       const title = r.article_title || payload.title || '';

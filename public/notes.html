@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -384,7 +384,8 @@
 
         const r = document.createElement('a');
         r.className = 'link';
-        r.href = '/#open=' + encodeURIComponent(link);
+        r.href = window.location.origin + '/#open=' + encodeURIComponent(link);
+        r.target = '_top';
         r.textContent = 'Open in Reader';
         row.appendChild(r);
       }
@@ -394,6 +395,31 @@
       copyBtn.textContent = 'Copy';
       copyBtn.onclick = () => copyText(cardToMarkdown(item));
       row.appendChild(copyBtn);
+
+      // Add "Open local file" for materialized or notes
+      const localPath = item.payload?.markdownPath || item.payload?.notePath;
+      if (localPath) {
+        // VS Code Link
+        const l = document.createElement('a');
+        l.className = 'link';
+        l.style.marginLeft = 'auto';
+        l.href = 'vscode://file' + localPath;
+        l.title = 'Open in VS Code / Cursor';
+        l.textContent = 'Open';
+        row.appendChild(l);
+
+        // Browser Link (View)
+        const dataIdx = localPath.indexOf('/data/');
+        if (dataIdx !== -1) {
+          const webPath = localPath.substring(dataIdx);
+          const v = document.createElement('a');
+          v.className = 'link';
+          v.href = webPath;
+          v.target = '_blank';
+          v.textContent = 'View';
+          row.appendChild(v);
+        }
+      }
 
       card.appendChild(meta);
       card.appendChild(title);
@@ -411,10 +437,12 @@
         return bits.join(' · ') || 'State updated';
       }
       if (item.type === 'note') {
-        return `New note saved\n${p.notePath || ''}`.trim();
+        const name = p.notePath ? p.notePath.split('/').pop() : '';
+        return `New note saved\n${name}`.trim();
       }
       if (item.type === 'materialize') {
-        return `Article materialized to Markdown\n${p.markdownPath || ''}`.trim();
+        const name = p.markdownPath ? p.markdownPath.split('/').pop() : '';
+        return `Article materialized to Markdown\n${name}`.trim();
       }
       return JSON.stringify(p, null, 2);
     }
