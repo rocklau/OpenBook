@@ -1,8 +1,12 @@
 # OpenBook
 
-A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**. OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
+A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**(OpenClaw, etc.). OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
 
-![OpenBook Interface](./image.png)
+![OpenBook Reader Interface](./reader_interface.png)
+*Modern, indie-style multi-column reader interface.*
+
+![OpenBook Notes Interface](./notes_interface.png)
+*Notion-like waterfall feed for notes and highlights.*
 
 ## Core Features
 
@@ -32,6 +36,40 @@ OpenBook is designed to be the perfect knowledge base for your AI workflows:
 - **Structural Clarity**: Uses YAML front matter for metadata, making it easy for agents to grep, filter, and index.
 - **Local-First & Transparent**: All your data lives in your filesystem. No complex APIs, no rate limits, and perfect privacy for local RAG (Retrieval-Augmented Generation).
 - **SEO for Agents**: Structured HTML and semantic layout help web-crawling agents understand your digital garden effortlessly.
+
+## Data Structure (AI-Native)
+
+OpenBook stores everything in a transparent, file-based structure that AI agents can easily parse:
+
+```text
+data/
+├── articles/             # Materialized articles (HTML -> MD)
+│   └── 2026/
+│       └── 02/
+│           ├── example-article.md
+│           └── example-article-assets/  # Localized images/resources
+├── notes/                # User notes and highlights
+├── openbook.db           # SQLite database for state and activity logs
+└── index.json            # Grep-friendly index of feeds and articles
+```
+
+### Example Materialized Article (`.md`)
+
+Each saved article is a clean Markdown file with YAML front matter:
+
+```markdown
+---
+title: "Getting the main thing right"
+url: "https://seangoedecke.com/getting-the-main-thing-right/"
+feed_url: "https://www.seangoedecke.com/rss.xml"
+published_at: "Thu, 05 Feb 2026 00:00:00 GMT"
+source: "html"
+---
+
+# Getting the main thing right
+
+When you’re running a project in a tech company...
+```
 
 ## Installation
 
