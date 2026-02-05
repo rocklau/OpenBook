@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RSS Reader</title>
+  <title>OpenBook</title>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -211,6 +212,87 @@
       background: var(--item-hover);
       border-color: var(--accent-color);
       color: var(--accent-color);
+    }
+
+    /* Indie action bar (Reader ↔ Notes) */
+    .actionbar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: rgba(247, 243, 237, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 0;
+    }
+
+    .actionbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .actionbar-left {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .actionbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.38rem 0.55rem;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+      transition: all 0.15s;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      background: var(--item-hover);
+      border-color: var(--accent-color);
+    }
+
+    .action-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      border-bottom: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .action-link:hover {
+      border-bottom-color: var(--border-color);
+    }
+
+    .highlight-pop {
+      position: fixed;
+      z-index: 9999;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.35rem 0.55rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 0.82rem;
+      box-shadow: var(--shadow);
+    }
+
+    .highlight-pop:hover {
+      border-color: var(--accent-color);
     }
 
     .current-date {
@@ -699,12 +781,43 @@
         font-size: 1.2rem;
       }
     }
+
+    /* Premium Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg-header);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      z-index: 10000;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast-icon {
+      font-size: 1.1rem;
+    }
   </style>
 </head>
 
 <body>
 
   <div class="backdrop" id="backdrop" onclick="closeAllMobile()"></div>
+  <div id="toast" class="toast"><span class="toast-icon">✨</span><span id="toastMsg"></span></div>
 
   <div class="mobile-nav">
     <button class="mobile-nav-btn" onclick="toggleMobileSidebar()" id="btnFeeds">
@@ -719,7 +832,13 @@
     <!-- Sidebar: Feeds -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <h2>Feeds</h2>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+          <h2>Feeds</h2>
+          <a href="/notes.html"
+            style="font-size:0.72rem; color: var(--text-muted); text-decoration:none; border-bottom:1px solid transparent;"
+            onmouseover="this.style.borderBottomColor='var(--border-color)'"
+            onmouseout="this.style.borderBottomColor='transparent'">Notes</a>
+        </div>
         <input type="text" class="feed-search" placeholder="Search feeds..." id="feedSearch" oninput="filterFeeds()">
       </div>
       <ul class="feed-list" id="feedList">
@@ -739,6 +858,12 @@
           <button class="date-nav-btn" onclick="changeDate(1)" title="Next day">→</button>
         </div>
         <div class="subtitle" id="listSubtitle">0 articles</div>
+        <div style="margin-top:6px; font-size:0.78rem;">
+          <a href="/notes.html"
+            style="color: var(--text-muted); text-decoration:none; border-bottom:1px solid transparent;"
+            onmouseover="this.style.borderBottomColor='var(--border-color)'"
+            onmouseout="this.style.borderBottomColor='transparent'">Notes</a>
+        </div>
       </div>
       <ul class="article-list" id="articleList">
         <li class="empty-state">
@@ -765,6 +890,21 @@
     let currentArticles = [];
     let currentDate = new Date();
     let isDateFilterMode = true;
+
+    function showToast(msg, icon = '✨') {
+      const t = document.getElementById('toast');
+      const tm = document.getElementById('toastMsg');
+      const ti = t.querySelector('.toast-icon');
+
+      tm.textContent = msg;
+      ti.textContent = icon;
+      t.classList.add('show');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        t.classList.remove('show');
+      }, 2500);
+    }
 
     // Initialize
     async function init() {
@@ -1047,6 +1187,24 @@
       const hasFullContent = article.content || article['content:encoded'];
       const hasSnippet = article.contentSnippet && article.contentSnippet.length > 50;
 
+      // Inline indie actions (read/fav/note/materialize)
+      const actionsHtml = `
+        <div class="actionbar">
+          <div class="actionbar-inner">
+            <div class="actionbar-left">
+              <button class="action-btn" onclick="markReadCurrent()" title="Mark read">Read</button>
+              <button class="action-btn" onclick="toggleFavoriteCurrent()" title="Favorite">Favorite</button>
+              <button class="action-btn" onclick="createNoteForCurrent()" title="New note">Note</button>
+              <button class="action-btn" onclick="saveFullToMarkdown()" title="Save full article to Markdown">Save</button>
+            </div>
+            <div class="actionbar-right">
+              <a class="action-link" href="/notes.html">Notes</a>
+            </div>
+          </div>
+          <button class="highlight-pop" id="highlightBtn" onclick="clipSelectionToNote()" style="display:none" title="Save selection as highlight">Highlight</button>
+        </div>
+      `;
+
       let viewMode = forceView;
       if (!viewMode) {
         viewMode = hasFullContent ? 'content' : 'iframe';
@@ -1054,17 +1212,20 @@
 
 
       if (viewMode === 'iframe') {
-        contentCol.innerHTML = `
+        contentCol.innerHTML = actionsHtml + `
           <iframe class="content-iframe" src="${article.link}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" onerror="iframeError(this)"></iframe>
         `;
       } else {
-        contentCol.innerHTML = `
+        const raw = article.content || article['content:encoded'] || '';
+        contentCol.innerHTML = actionsHtml + `
           <div class="content-body">
-            <div class="content-body-inner">
-              ${article.content || article['content:encoded']}
+            <div class="content-body-inner" id="contentBodyInner">
+              ${sanitizeHtml(raw)}
             </div>
           </div>
         `;
+        // Enable selection highlight popover in content mode
+        setupHighlightPopover(document.getElementById('contentBodyInner'));
       }
     }
 
@@ -1080,7 +1241,7 @@
 
     function copyLink(url) {
       navigator.clipboard.writeText(url).then(() => {
-        alert('Link copied to clipboard');
+        showToast('Link copied to clipboard', '🔗');
       });
     }
 
@@ -1089,6 +1250,21 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Prevent XSS from RSS content.
+    // Note: for safety, we DO NOT allow scripts/events/iframes inside content mode.
+    function sanitizeHtml(html) {
+      if (!html) return '';
+      if (window.DOMPurify) {
+        return window.DOMPurify.sanitize(html, {
+          USE_PROFILES: { html: true },
+          FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'],
+          FORBID_ATTR: ['onerror', 'onload', 'onclick', 'style']
+        });
+      }
+      // Fallback: escape as plain text
+      return escapeHtml(String(html));
     }
 
     function formatDate(dateStr) {
@@ -1105,6 +1281,159 @@
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
+    function getFeedUrlByName(feedName) {
+      const f = feeds.find(x => x.name === feedName);
+      return f ? f.url : null;
+    }
+
+    async function apiPost(url, body) {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function currentArticleIdGuess() {
+      // Backend currently expects an articleId; if the article was indexed via /api/articles, it already exists.
+      // For materialize/state/note we primarily rely on materialize response's articleId.
+      return null;
+    }
+
+    async function markReadCurrent() {
+      if (!currentArticle) return;
+      // If we don't know articleId, we materialize first (cheap for RSS full-content sites; for others it's real fetch).
+      const r = await saveFullToMarkdown({ silent: true });
+      if (r && r.articleId) {
+        await apiPost('/api/article/state', { articleId: r.articleId, isRead: true });
+        showToast('Marked as read', '📖');
+      }
+    }
+
+    async function toggleFavoriteCurrent() {
+      if (!currentArticle) return;
+      const r = await saveFullToMarkdown({ silent: true });
+      if (r && r.articleId) {
+        await apiPost('/api/article/state', { articleId: r.articleId, isFavorite: true });
+        showToast('Added to favorites', '⭐');
+      }
+    }
+
+    async function createNoteForCurrent() {
+      if (!currentArticle) return;
+      const r = await saveFullToMarkdown({ silent: true });
+      if (!r || !r.articleId) return;
+      const content = prompt('Write a quick note (Markdown):', '');
+      if (content == null) return;
+      await apiPost('/api/article/note', { articleId: r.articleId, title: 'Note', content });
+      showToast('Note saved', '📝');
+    }
+
+    async function saveFullToMarkdown(opts = {}) {
+      if (!currentArticle) return null;
+      const link = currentArticle.link;
+      if (!link) return null;
+      const feedUrl = getFeedUrlByName(currentArticle.feedName) || getFeedUrlByName(currentArticle.feedTitle) || null;
+      try {
+        const out = await apiPost('/api/article/materialize', {
+          url: link,
+          feedUrl,
+          title: currentArticle.title,
+          publishedAt: currentArticle.pubDate
+        });
+        if (!opts.silent) showToast('Saved to Markdown', '💾');
+        return out;
+      } catch (e) {
+        if (!opts.silent) showToast('Save failed: ' + e.message, '❌');
+        throw e;
+      }
+    }
+
+    async function clipSelectionToNote() {
+      if (!currentArticle) return;
+      const sel = window.getSelection ? window.getSelection().toString() : '';
+      if (!sel || sel.trim().length < 3) {
+        showToast('Select some text first', '✍️');
+        return;
+      }
+      const r = await saveFullToMarkdown({ silent: true });
+      if (!r || !r.articleId) return;
+      const quote = sel.trim().split('\n').map(l => '> ' + l).join('\n');
+      const content = `${quote}\n\n— ${currentArticle.link}\n`;
+      await apiPost('/api/article/note', { articleId: r.articleId, title: 'Highlight', content });
+      // Hide popover and clear selection
+      const hb = document.getElementById('highlightBtn');
+      if (hb) hb.style.display = 'none';
+      if (window.getSelection) window.getSelection().removeAllRanges();
+      showToast('Highlight saved', '📎');
+    }
+
+    function setupHighlightPopover(containerEl) {
+      const btn = document.getElementById('highlightBtn');
+      if (!btn || !containerEl) return;
+
+      const hide = () => {
+        btn.style.display = 'none';
+      };
+
+      const showAt = (x, y) => {
+        btn.style.left = Math.min(x + 10, window.innerWidth - 120) + 'px';
+        btn.style.top = Math.max(y - 34, 10) + 'px';
+        btn.style.display = 'inline-block';
+      };
+
+      containerEl.addEventListener('mouseup', (e) => {
+        const sel = window.getSelection ? window.getSelection().toString() : '';
+        if (sel && sel.trim().length >= 3) {
+          showAt(e.clientX, e.clientY);
+        } else {
+          hide();
+        }
+      });
+
+      containerEl.addEventListener('keyup', () => {
+        const sel = window.getSelection ? window.getSelection().toString() : '';
+        if (!(sel && sel.trim().length >= 3)) hide();
+      });
+
+      document.addEventListener('scroll', hide, { passive: true });
+      document.addEventListener('click', (e) => {
+        if (e.target === btn) return;
+        const sel = window.getSelection ? window.getSelection().toString() : '';
+        if (!(sel && sel.trim().length >= 3)) hide();
+      });
+    }
+
+    // Notes -> Reader deep link support
+    async function openFromHash() {
+      const h = location.hash || '';
+      if (!h.startsWith('#open=')) return;
+      const link = decodeURIComponent(h.slice('#open='.length));
+      if (!link) return;
+      try {
+        const list = await fetch('/api/articles?limit=200').then(r => r.json());
+        const found = list.find(a => a.link === link);
+        if (found) {
+          currentArticles = [found];
+          currentArticle = found;
+          renderArticleList(currentArticles);
+          renderArticleContent(found);
+          return;
+        }
+      } catch { }
+
+      // Fallback: open directly as iframe
+      const fallback = { title: link, link, pubDate: new Date().toISOString(), feedName: 'Link' };
+      currentArticles = [fallback];
+      currentArticle = fallback;
+      renderArticleList(currentArticles);
+      renderArticleContent(fallback, 'iframe');
+    }
+
+    const _init = init;
+    init = async function () {
+      await _init();
+      await openFromHash();
+    };
 
     init();
   </script>

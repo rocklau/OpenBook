@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenBook Notes</title>
+  <style>
+    :root {
+      --bg: #f7f3ed;
+      --panel: #faf8f5;
+      --text: #2c2419;
+      --muted: #8b7d6b;
+      --border: #e8e2d9;
+      --shadow: 0 1px 3px rgba(44, 36, 25, 0.06);
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: 'Georgia', 'Times New Roman', 'Songti SC', 'SimSun', serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(247, 243, 237, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+    }
+
+    .brand .sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 7px 10px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip:hover {
+      border-color: #d1d5db;
+    }
+
+    .chip.primary {
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+
+    .chip input {
+      width: 52px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-family: var(--mono);
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 16px 60px;
+    }
+
+    .hint {
+      margin: 8px 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Waterfall (masonry-like) via CSS columns */
+    .waterfall {
+      column-count: 3;
+      column-gap: 14px;
+    }
+
+    @media (max-width: 1020px) {
+      .waterfall {
+        column-count: 2;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .waterfall {
+        column-count: 1;
+      }
+    }
+
+    .card {
+      break-inside: avoid;
+      margin: 0 0 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 12px 10px;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .meta .type {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #fafafa;
+    }
+
+    .meta .time {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .title {
+      margin: 0 0 6px;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .desc {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .link {
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .btn {
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      border-color: #d1d5db;
+    }
+
+    .footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .loading {
+      color: var(--muted);
+      font-size: 13px;
+      font-family: var(--mono);
+      padding: 10px 0;
+    }
+
+    textarea.hidden {
+      position: fixed;
+      left: -9999px;
+      top: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      z-index: 10000;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast-icon {
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>Notes</h1>
+        <div class="sub">Notion-like activity waterfall · copy & export</div>
+      </div>
+
+      <div class="actions">
+        <div class="chip" title="Back to reader" onclick="location.href='/'">← Reader</div>
+        <div class="chip primary" onclick="copyWeekly()">Copy weekly</div>
+        <div class="chip primary" onclick="exportWeekly()">Export Markdown</div>
+        <div class="chip" title="How many days in the weekly review">
+          Days: <input id="days" type="number" min="1" max="365" value="7" />
+        </div>
+        <div class="chip" onclick="refresh()">Refresh</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="hint">
+      This page aggregates your actions: favorite/read, notes, and materialized (HTML→Markdown) articles.
+      Use “Copy weekly” to paste into Notion, or export a Markdown file for Obsidian/Logseq/blog workflows.
+    </div>
+
+    <div id="waterfall" class="waterfall"></div>
+
+    <div class="footer">
+      <div id="loading" class="loading">Loading…</div>
+      <button id="more" class="btn" style="display:none" onclick="loadMore()">Load more</button>
+    </div>
+  </div>
+
+  <textarea id="clipboard" class="hidden"></textarea>
+  <div id="toast" class="toast"><span class="toast-icon">✨</span><span id="toastMsg"></span></div>
+
+  <script>
+    let offset = 0;
+    const limit = 60;
+    let finished = false;
+
+    function toast(msg, icon = '✨') {
+      const t = document.getElementById('toast');
+      const tm = document.getElementById('toastMsg');
+      const ti = t.querySelector('.toast-icon');
+
+      tm.textContent = msg;
+      ti.textContent = icon;
+      t.classList.add('show');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        t.classList.remove('show');
+      }, 2500);
+    }
+
+    function fmtTime(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString(undefined, { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return iso;
+      }
+    }
+
+    function typeLabel(type) {
+      if (type === 'state') return 'STATE';
+      if (type === 'note') return 'NOTE';
+      if (type === 'materialize') return 'MATERIALIZE';
+      return String(type || 'UNKNOWN').toUpperCase();
+    }
+
+    function buildCard(item) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+
+      const type = document.createElement('div');
+      type.className = 'type';
+      type.textContent = typeLabel(item.type);
+
+      const time = document.createElement('div');
+      time.className = 'time';
+      time.textContent = fmtTime(item.createdAt);
+
+      meta.appendChild(type);
+      meta.appendChild(time);
+
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = (item.article && item.article.title) || item.payload?.title || '(no title)';
+
+      const desc = document.createElement('div');
+      desc.className = 'desc';
+      desc.textContent = describe(item);
+
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const link = (item.article && item.article.link) || item.payload?.url;
+      if (link) {
+        const a = document.createElement('a');
+        a.className = 'link';
+        a.href = link;
+        a.target = '_blank';
+        a.rel = 'noreferrer';
+        a.textContent = 'Open link';
+        row.appendChild(a);
+
+        const r = document.createElement('a');
+        r.className = 'link';
+        r.href = '/#open=' + encodeURIComponent(link);
+        r.textContent = 'Open in Reader';
+        row.appendChild(r);
+      }
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.onclick = () => copyText(cardToMarkdown(item));
+      row.appendChild(copyBtn);
+
+      card.appendChild(meta);
+      card.appendChild(title);
+      card.appendChild(desc);
+      card.appendChild(row);
+      return card;
+    }
+
+    function describe(item) {
+      const p = item.payload || {};
+      if (item.type === 'state') {
+        const bits = [];
+        if (typeof p.isRead === 'boolean') bits.push(`Read: ${p.isRead ? 'Yes' : 'No'}`);
+        if (typeof p.isFavorite === 'boolean') bits.push(`Favorite: ${p.isFavorite ? 'Yes' : 'No'}`);
+        return bits.join(' · ') || 'State updated';
+      }
+      if (item.type === 'note') {
+        return `New note saved\n${p.notePath || ''}`.trim();
+      }
+      if (item.type === 'materialize') {
+        return `Article materialized to Markdown\n${p.markdownPath || ''}`.trim();
+      }
+      return JSON.stringify(p, null, 2);
+    }
+
+    function cardToMarkdown(item) {
+      const t = (item.article && item.article.title) || item.payload?.title || '(no title)';
+      const link = (item.article && item.article.link) || item.payload?.url || '';
+      const when = item.createdAt || '';
+      const type = typeLabel(item.type);
+      const desc = describe(item);
+
+      const lines = [];
+      lines.push(`### ${t}`);
+      lines.push('');
+      lines.push(`- Time: ${when}`);
+      lines.push(`- Type: ${type}`);
+      if (link) lines.push(`- Link: ${link}`);
+      lines.push('');
+      if (desc) lines.push(desc);
+      lines.push('');
+      return lines.join('\n');
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('Copied');
+      } catch {
+        // fallback
+        const ta = document.getElementById('clipboard');
+        ta.value = text;
+        ta.select();
+        document.execCommand('copy');
+        toast('Copied');
+      }
+    }
+
+    async function copyWeekly() {
+      const days = parseInt(document.getElementById('days').value || '7', 10);
+      const md = await fetch(`/api/export/markdown?days=${days}`).then(r => r.text());
+      await copyText(md);
+    }
+
+    function exportWeekly() {
+      const days = parseInt(document.getElementById('days').value || '7', 10);
+      window.open(`/api/export/markdown?days=${days}`, '_blank');
+    }
+
+    async function loadMore() {
+      if (finished) return;
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('more').style.display = 'none';
+
+      const res = await fetch(`/api/activity?limit=${limit}&offset=${offset}`);
+      const data = await res.json();
+      const items = data.items || [];
+
+      const wf = document.getElementById('waterfall');
+      items.forEach(it => wf.appendChild(buildCard(it)));
+
+      offset += items.length;
+      if (items.length < limit) {
+        finished = true;
+        document.getElementById('loading').textContent = '— end —';
+        document.getElementById('loading').style.display = 'block';
+      } else {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('more').style.display = 'inline-block';
+      }
+    }
+
+    async function refresh() {
+      offset = 0;
+      finished = false;
+      document.getElementById('waterfall').innerHTML = '';
+      document.getElementById('loading').textContent = 'Loading…';
+      await loadMore();
+    }
+
+    refresh();
+  </script>
+</body>
+
+</html>

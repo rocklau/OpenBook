@@ -1,8 +1,8 @@
 {
-  "name": "rss-reader",
-  "version": "1.0.0",
-  "description": "A simple RSS reader with CLI and Web interface",
-  "main": "index.js",
+  "name": "openbook",
+  "version": "1.2.0",
+  "description": "A clean, indie-style RSS reader with CLI and Web interface",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "cli": "node cli.js",
@@ -10,9 +10,14 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "rss-parser": "^3.13.0",
+    "better-sqlite3": "^11.6.0",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "jsdom": "^26.0.0",
+    "p-queue": "^8.1.0",
+    "rss-parser": "^3.13.0",
+    "turndown": "^7.2.0",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
