@@ -4,7 +4,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OpenBook</title>
+  <title>OpenBook - Your Personal RSS Reader & Knowledge Collector</title>
+  <meta name="description"
+    content="OpenBook is a clean, indie-style RSS reader and knowledge collector. Capture, materialize, and organize articles as Markdown for your personal archive.">
+  <meta name="keywords" content="RSS reader, Knowledge Management, Personal Archive, Markdown, Indie Web, OpenBook">
+  <link rel="canonical" href="http://localhost:3000/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:3000/">
+  <meta property="og:title" content="OpenBook - Your Personal RSS Reader & Knowledge Collector">
+  <meta property="og:description"
+    content="A personal RSS reader that helps you capture and organize articles for long-term reference.">
+  <meta property="og:image" content="http://localhost:3000/image.png">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="http://localhost:3000/">
+  <meta property="twitter:title" content="OpenBook - Your Personal RSS Reader & Knowledge Collector">
+  <meta property="twitter:description"
+    content="A personal RSS reader that helps you capture and organize articles for long-term reference.">
+  <meta property="twitter:image" content="http://localhost:3000/image.png">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
   <style>
     * {
@@ -881,11 +901,24 @@
     .toast-icon {
       font-size: 1.1rem;
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
   </style>
 </head>
 
 <body>
 
+  <h1 class="sr-only">OpenBook RSS Reader</h1>
   <div class="backdrop" id="backdrop" onclick="closeAllMobile()"></div>
   <div id="toast" class="toast"><span class="toast-icon">✨</span><span id="toastMsg"></span></div>
 

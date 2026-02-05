@@ -1,36 +1,43 @@
 # OpenBook
 
-A clean, indie-style RSS reader built with Node.js, featuring both CLI and Web interfaces.
+A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**. OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
 
 ![OpenBook Interface](./image.png)
 
-## Features
+## Core Features
 
-- Multiple RSS feed subscriptions
-- Auto-load OPML subscription files
-- Command line interface (CLI)
-- Web interface with indie aesthetic
-- Responsive design
-- Smart content display with iframe embedding for feeds without full content
+- **Multi-source RSS Reading**: Follow your favorite blogs and news sites.
+- **OPML Support**: Automatically load `.opml` files placed in the project root.
+- **Three-column Layout**: Elegant feed navigation, article listing, and content reading.
+- **Indie Aesthetic**: Warm tones, serif typography, and a minimal, focused design.
+- **Responsive Navigation**: Adaptive layout for desktop and mobile devices.
+
+## Knowledge Collection Features
+
+OpenBook goes beyond simple reading with powerful gathering tools:
+
+- **Article Materialization**: Fetch full article content and convert it into clean Markdown with YAML front matter for your personal archive.
+- **Resource Collection**: Automatically download and localize images/resources within saved articles to ensure they remain accessible offline.
+- **Note-taking System**: Create Markdown notes linked directly to articles.
+- **Activity Feed**: A waterfall-style "Notes Home" to track your highlights, saves, and reading history.
+- **Markdown Export**: Export your activity history into a structured Markdown table, perfect for importing into Notion or Obsidian.
+- **Read/Favorite Status**: Keep track of what you've read and what you want to keep.
+
+## Built for AI Agents (Agent-Native)
+
+OpenBook is designed to be the perfect knowledge base for your AI workflows:
+
+- **Markdown-First**: Articles and notes are stored in pure Markdown. This is the native language of LLMs, ensuring perfect context retrieval.
+- **CLI-Powered**: A robust command-line interface allows AI agents (like the one you're using) to navigate and read your library without a GUI.
+- **Structural Clarity**: Uses YAML front matter for metadata, making it easy for agents to grep, filter, and index.
+- **Local-First & Transparent**: All your data lives in your filesystem. No complex APIs, no rate limits, and perfect privacy for local RAG (Retrieval-Augmented Generation).
+- **SEO for Agents**: Structured HTML and semantic layout help web-crawling agents understand your digital garden effortlessly.
 
 ## Installation
 
 ```bash
 npm install
 ```
-
-## Testing
-
-```bash
-npm test
-```
-
-Tests cover:
-- Date filtering logic
-- "Today"/"Yesterday" date display
-- RSS content detection (full content vs snippet vs iframe)
-- Article sorting by date
-- Feed statistics calculation
 
 ## Usage
 
@@ -40,21 +47,14 @@ Tests cover:
 npm start
 ```
 
-Then open http://localhost:3000
+Access the interface at `http://localhost:3000`.
 
-#### Web Interface Features
-
-- **Three-column layout**: Feeds | Article list | Content
-- **Indie aesthetic**: Warm tones, serif typography, minimal design
-- **Smart content display**:
-  - Full content when available
-  - Auto iframe embed when RSS lacks content
-  - Toggle between Web view and Snippet view
-- **Feed search**: Quickly filter feeds
-- **Article stats**: Article count per feed
-- **Mobile responsive**: Adapts to smaller screens
+- **Main Reader**: `/index.html` (or `/`)
+- **Notes Home**: `/notes.html` (Activity feed and highlights)
 
 ### Command Line Tool
+
+OpenBook preserves its roots with a fully functional CLI.
 
 ```bash
 # View all articles
@@ -67,22 +67,35 @@ node cli.js list
 node cli.js read 1
 ```
 
-## OPML Files
-
-Place `.opml` files in the project root directory and they will be automatically loaded.
-
-The current directory has 2 OPML files with 200+ feed subscriptions.
-
-## API Endpoints
-
-- `GET /api/feeds` - Get all RSS feeds
-- `GET /api/articles` - Get all articles
-- `GET /api/feed/:index` - Get articles from a specific feed
-- `POST /api/refresh` - Refresh feed list
-
 ## Tech Stack
 
-- Node.js
-- Express
-- rss-parser
-- Vanilla JavaScript (frontend)
+- **Backend**: Node.js, Express, SQLite (via `better-sqlite3`)
+- **RSS Engine**: `rss-parser`
+- **Markdown Logic**: `turndown` (HTML to MD conversion)
+- **Frontend**: Vanilla JavaScript, CSS, HTML5
+
+## Development and Testing
+
+The project includes a suite of tests covering core logic:
+
+```bash
+npm test
+```
+
+Tests include article sorting, date filtering, feed statistics, and content detection logic.
+
+## OPML Configuration
+
+Simply place your `.opml` files in the root directory. OpenBook will scan and load them on startup. The current build supports 200+ subscriptions through included OPML files.
+
+## API
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/feeds` | GET | List all subscriptions |
+| `/api/articles` | GET | List recent articles |
+| `/api/article/materialize` | POST | Fetch and save article as Markdown |
+| `/api/article/state` | POST | Update read/favorite status |
+| `/api/article/note` | POST | Create a note for an article |
+| `/api/activity` | GET | Fetch the activity log |
+| `/api/export/markdown` | GET | Export activity as Markdown file |
