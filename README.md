@@ -1,6 +1,6 @@
 # OpenBook
 
-A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**(OpenClaw, etc.). OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
+A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**(OpenClaw, OpenCode, Claude CoWork, Manus, etc.). OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
 
 ![OpenBook Reader Interface](./reader_interface.png)
 *Modern, indie-style multi-column reader interface.*
