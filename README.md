@@ -1,31 +1,50 @@
 # OpenBook
 
-A personal, indie-style RSS reader and knowledge collector built with Node.js. Designed for **Humans** and optimized for **AI Agents**. OpenBook doesn't just read feeds; it helps you capture, materialize, and organize knowledge in a format both you and your LLMs will love.
+OpenBook is an indie-style RSS reader and knowledge collector built with Node.js.
+It is designed for **humans** (focused reading experience) and **AI agents** (clean, local, parseable data).
 
-![OpenBook Interface](./reader_interface.png)
-*Modern, integrated indie-style multi-column reader and notes interface.*
+| Desktop Reader | Desktop Notes |
+|---|---|
+| <img src="./reader_interface.png" width="100%" /> | <img src="./notes_interface.png" width="100%" /> |
+
+<p align="center"><em>Unified desktop experience: Reader + Notes in one integrated layout.</em></p>
+
+| Mobile Feeds | Mobile Reader | Mobile Notes |
+|---|---|---|
+| <img src="./mobile_feeds.png" width="100%" /> | <img src="./mobile_reader.png" width="100%" /> | <img src="./mobile_notes.png" width="100%" /> |
+
+<p align="center"><em>Mobile-first stacked views with minimalist text navigation.</em></p>
+
+## Why OpenBook
+
+Most RSS readers stop at "read later." OpenBook goes further:
+
+- Read from many sources
+- Save full articles as Markdown
+- Capture notes and highlights
+- Build a durable personal knowledge base for both yourself and LLM workflows
 
 ## Core Features
 
-- **Integrated Knowledge Workflow**: Seamlessly switch between **Reader** and **Notes** modes within a single unified interface.
-- **Multi-source RSS Reading**: Follow your favorite blogs and news sites with OPML support.
-- **Knowledge Waterfall**: A refined activity feed that captures your high-value actions: **Favorites**, **Notes**, and **Highlights**.
-- **Indie Aesthetic**: Warm tones, serif typography, and a minimal, focused design optimized for deep reading.
-- **Deep Linking**: Jump directly from a note or highlight back to the exact article in the reader.
+- **Unified Reader + Notes UI**: Switch between reading and note waterfall views in a single interface.
+- **Multi-source RSS Reading**: Follow blogs/news feeds with OPML import support.
+- **Knowledge Waterfall**: Review high-signal actions (**Favorites**, **Notes**, **Highlights**) with infinite scroll.
+- **Precise Highlight Capture**: Selection-based popover positioning for reliable highlight actions.
+- **Deep Linking**: Jump from a note/highlight back to the original article context.
+- **Paper-like Visual Design**: Warm palette, serif typography, and distraction-light layout for deep reading.
+- **Mobile-First Adaptation**: Dedicated stacked mobile views with strict state-driven navigation.
+- **Local-First Storage**: Data stays on your filesystem, ready for grep, scripts, and local RAG.
 
-## Knowledge Collection Features
+## Knowledge Collection Workflow
 
-OpenBook goes beyond simple reading with powerful gathering tools:
+OpenBook helps you turn browsing into reusable knowledge:
 
-- **Article Materialization**: Fetch full article content and convert it into clean Markdown with YAML front matter for your personal archive.
-- **Resource Collection**: Automatically download and localize images/resources within saved articles for offline access.
-- **Note-taking & Highlighting**: Create Markdown notes or save text selections as highlights directly linked to articles.
-- **Markdown Export**: Export your curated activity into a structured Markdown table, perfect for Obsidian or Notion.
-- **Local-First**: All your data lives in your filesystem. No complex APIs, perfect for local RAG (Retrieval-Augmented Generation).
+1. **Ingest** feeds and read articles
+2. **Materialize** full content to Markdown (`HTML -> MD + front matter`)
+3. **Capture** notes/highlights linked to source articles
+4. **Export** activity as Markdown for Obsidian/Notion/reviews
 
 ## Data Structure (AI-Native)
-
-OpenBook stores everything in a transparent, file-based structure that AI agents can easily parse:
 
 ```text
 data/
@@ -39,25 +58,23 @@ data/
 └── index.json            # Grep-friendly index of feeds and articles
 ```
 
-## Installation
+## Quick Start
+
+### 1) Install
 
 ```bash
 npm install
 ```
 
-## Usage
-
-### Web Interface
+### 2) Run Web App
 
 ```bash
 npm start
 ```
 
-Access the interface at `http://localhost:3000`. Use the toggle at the top of the sidebar to switch between **Reader** and **Notes** views.
+Open: `http://localhost:3000`
 
-### Command Line Tool
-
-OpenBook preserves its roots with a fully functional CLI.
+### 3) Optional: Use CLI
 
 ```bash
 # View recent articles
@@ -66,26 +83,24 @@ node cli.js
 # List all RSS feeds
 node cli.js list
 
-# Read a specific article
+# Read article by index
 node cli.js read 1
+```
+
+## Development & Testing
+
+```bash
+npm test
+# Integration tests only:
+node --test test/integration.test.js
 ```
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express, SQLite (via `better-sqlite3`)
-- **RSS Engine**: `rss-parser`
-- **Markdown**: `turndown` for HTML-to-MD conversion
-- **Frontend**: Vanilla JavaScript (Modern ES6+), CSS Grid/Flexbox
-
-## Development and Testing
-
-The project includes unit and integration tests covering core logic and knowledge workflows:
-
-```bash
-npm test
-# To run integration tests specifically:
-node --test test/integration.test.js
-```
+- **Backend**: Node.js, Express, SQLite (`better-sqlite3`)
+- **RSS**: `rss-parser`
+- **Markdown**: `turndown`
+- **Frontend**: Vanilla JavaScript (ES6+), CSS Grid/Flexbox
 
 ## API
 
@@ -96,5 +111,9 @@ node --test test/integration.test.js
 | `/api/article/materialize` | POST | Fetch and save article as Markdown |
 | `/api/article/state` | POST | Update read/favorite status |
 | `/api/article/note` | POST | Create a note or highlight |
-| `/api/activity` | GET | Fetch refined activity log (Favs, Notes, Highlights) |
+| `/api/activity` | GET | Fetch activity log (Favorites, Notes, Highlights) |
 | `/api/export/markdown` | GET | Export activity as Markdown review |
+
+## Documentation
+
+For architecture notes and implementation lessons (unified interface, mobile behavior, state-driven layout), see [AGENTS.md](./Agents.md).
