@@ -15,6 +15,40 @@ It is designed for **humans** (focused reading experience) and **AI agents** (cl
 
 <p align="center"><em>Mobile-first stacked views with minimalist text navigation and focused article reading.</em></p>
 
+## Interface Deep Dive (More Visual Details)
+
+### Desktop: Reader Focus
+
+<img src="./reader_interface_detail_2.png" width="100%" />
+
+- Left rail for feed/source context
+- Middle column for article queue and scanning
+- Right pane for long-form reading and note capture
+
+### Desktop: Notes Waterfall
+
+| Top of Notes | Scrolled Notes |
+|---|---|
+| <img src="./notes_interface_top.png" width="100%" /> | <img src="./notes_interface_scrolled.png" width="100%" /> |
+
+- High-signal cards: favorites, notes, highlights
+- Infinite scroll to review historical captures
+- Deep-link affordance back to source article context
+
+### Mobile Flow: Entry -> Reading -> Detail -> Notes
+
+| Step 1: Feeds | Step 2: Reader List |
+|---|---|
+| <img src="./mobile_feeds.png" width="100%" /> | <img src="./mobile_reader.png" width="100%" /> |
+
+| Step 3: Reader Detail | Step 4: Notes |
+|---|---|
+| <img src="./mobile_reader_detail.png" width="100%" /> | <img src="./mobile_notes.png" width="100%" /> |
+
+- Text-first bottom navigation reduces UI noise
+- View states are mutually exclusive to avoid touch/scroll conflicts
+- Reader detail uses a focused layout for immersive article reading
+
 ## Why OpenBook
 
 Most RSS readers stop at "read later." OpenBook goes further:
@@ -154,4 +188,4 @@ This project uses README screenshots as part of product communication. The workf
 
 ## Documentation
 
-For architecture notes and implementation lessons (unified interface, mobile behavior, state-driven layout), see [AGENTS.md](./Agents.md).
+For architecture notes and implementation lessons (unified interface, mobile behavior, state-driven layout), see [AGENTS.md](./AGENTS.md).
