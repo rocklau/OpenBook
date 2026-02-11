@@ -376,11 +376,22 @@
     }
 
     // --- Reader Logic ---
+    function setupNotesInfiniteScroll() {
+      const col = document.getElementById('notesCol');
+      col.addEventListener('scroll', () => {
+        if (notesFinished || notesLoading || !document.body.classList.contains('body-view-notes')) return;
+        if (col.scrollTop + col.clientHeight >= col.scrollHeight - 300) {
+          loadMoreNotes();
+        }
+      });
+    }
+
     async function init() {
       await loadFeeds();
       await loadArticlesByDate(new Date());
       setupHashRouter();
       setupHighlightPopover();
+      setupNotesInfiniteScroll();
 
       if (document.body.classList.contains('body-view-notes')) {
         refreshNotes();
