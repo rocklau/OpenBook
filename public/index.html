@@ -297,6 +297,67 @@
       border-bottom-color: var(--border-color);
     }
 
+    .activity-panel {
+      position: fixed;
+      top: 72px;
+      right: 18px;
+      width: min(360px, calc(100vw - 36px));
+      max-height: calc(100vh - 92px);
+      overflow: hidden;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+      z-index: 1100;
+      display: none;
+      flex-direction: column;
+    }
+
+    .activity-panel.show {
+      display: flex;
+    }
+
+    .activity-panel-header {
+      padding: 0.7rem 0.85rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.83rem;
+    }
+
+    .activity-panel-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow: auto;
+    }
+
+    .activity-panel-item {
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.65rem 0.85rem;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .activity-panel-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-type {
+      color: var(--accent-color);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.2rem;
+    }
+
+    .activity-time {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      margin-top: 0.2rem;
+    }
+
     .highlight-pop {
       position: fixed;
       z-index: 9999;
@@ -863,6 +924,16 @@
         padding-top: 2rem;
       }
 
+      .activity-panel {
+        top: auto;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        max-height: 55vh;
+        border-radius: 14px 14px 0 0;
+      }
+
       .content-body {
         padding: 2rem 1rem;
       }
@@ -985,6 +1056,16 @@
     </section>
   </div>
 
+  <aside class="activity-panel" id="activityPanel">
+    <div class="activity-panel-header">
+      <strong>Recent Activity</strong>
+      <button class="action-btn" style="padding:0.28rem 0.45rem;" onclick="toggleActivityPanel(false)">Close</button>
+    </div>
+    <ul class="activity-panel-list" id="activityPanelList">
+      <li class="activity-panel-item">Loading…</li>
+    </ul>
+  </aside>
+
   <script>
     let feeds = [];
     let articles = [];
@@ -993,6 +1074,7 @@
     let currentArticles = [];
     let currentDate = new Date();
     let isDateFilterMode = true;
+    let isActivityPanelOpen = false;
 
     function showToast(msg, icon = '✨') {
       const t = document.getElementById('toast');
@@ -1013,6 +1095,7 @@
     async function init() {
       await loadFeeds();
       await loadArticlesByDate(new Date());
+      await refreshActivityPanel();
 
       // Add escape key to close mobile overlays
       window.addEventListener('keydown', (e) => {
@@ -1308,6 +1391,7 @@
               <button class="action-btn" onclick="createNoteForCurrent()" title="New note and archive">📝</button>
             </div>
             <div class="actionbar-right">
+              <button class="action-btn" onclick="toggleActivityPanel()" title="Show recent activity">Log</button>
               <a class="action-link" href="/notes.html">Notes</a>
             </div>
           </div>
@@ -1421,6 +1505,64 @@
       return null;
     }
 
+    function summarizeActivity(item) {
+      const p = item && item.payload ? item.payload : {};
+      if (item.type === 'state') {
+        if (p.isFavorite) return 'Favorited article';
+        if (p.isRead) return 'Marked as read';
+        return 'Updated state';
+      }
+      if (item.type === 'note') return 'Saved a note';
+      if (item.type === 'materialize') return 'Saved to Markdown';
+      return 'Updated';
+    }
+
+    function formatTimeShort(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleString(undefined, { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return iso;
+      }
+    }
+
+    async function refreshActivityPanel() {
+      const list = document.getElementById('activityPanelList');
+      if (!list) return;
+      try {
+        const data = await fetch('/api/activity?limit=20&offset=0').then(r => r.json());
+        const items = data.items || [];
+        if (!items.length) {
+          list.innerHTML = '<li class="activity-panel-item">No activity yet.</li>';
+          return;
+        }
+        list.innerHTML = items.map(item => {
+          const title = escapeHtml((item.article && item.article.title) || (item.payload && item.payload.title) || '(untitled)');
+          return `<li class="activity-panel-item">
+            <div class="activity-type">${escapeHtml(item.type || 'activity')}</div>
+            <div>${escapeHtml(summarizeActivity(item))} · ${title}</div>
+            <div class="activity-time">${escapeHtml(formatTimeShort(item.createdAt || ''))}</div>
+          </li>`;
+        }).join('');
+      } catch (err) {
+        list.innerHTML = `<li class="activity-panel-item">Failed to load activity: ${escapeHtml(err.message || 'unknown error')}</li>`;
+      }
+    }
+
+    async function toggleActivityPanel(force) {
+      const panel = document.getElementById('activityPanel');
+      if (!panel) return;
+      const shouldOpen = typeof force === 'boolean' ? force : !isActivityPanelOpen;
+      if (shouldOpen) {
+        panel.classList.add('show');
+        isActivityPanelOpen = true;
+        await refreshActivityPanel();
+      } else {
+        panel.classList.remove('show');
+        isActivityPanelOpen = false;
+      }
+    }
+
 
     let isNoteEditorOpen = false;
 
@@ -1464,6 +1606,7 @@
 
         showToast('Note saved', '📝');
         closeNoteEditor();
+        await refreshActivityPanel();
       } catch (err) {
         showToast('Save failed: ' + err.message, '❌');
       } finally {
@@ -1479,6 +1622,7 @@
         // Favoriting also implies reading/processing
         await apiPost('/api/article/state', { articleId: r.articleId, isFavorite: true, isRead: true });
         showToast('Added to favorites and archived', '⭐');
+        await refreshActivityPanel();
       }
     }
 
@@ -1524,6 +1668,7 @@
       if (hb) hb.style.display = 'none';
       if (window.getSelection) window.getSelection().removeAllRanges();
       showToast('Highlight saved', '📎');
+      await refreshActivityPanel();
     }
 
     function setupHighlightPopover(containerEl) {
