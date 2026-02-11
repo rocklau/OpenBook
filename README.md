@@ -9,11 +9,11 @@ It is designed for **humans** (focused reading experience) and **AI agents** (cl
 
 <p align="center"><em>Unified desktop experience: Reader + Notes in one integrated layout.</em></p>
 
-| Mobile Feeds | Mobile Reader | Mobile Notes |
-|---|---|---|
-| <img src="./mobile_feeds.png" width="100%" /> | <img src="./mobile_reader.png" width="100%" /> | <img src="./mobile_notes.png" width="100%" /> |
+| Mobile Feeds | Mobile Reader (List) | Mobile Reader (Detail) | Mobile Notes |
+|---|---|---|---|
+| <img src="./mobile_feeds.png" width="100%" /> | <img src="./mobile_reader.png" width="100%" /> | <img src="./mobile_reader_detail.png" width="100%" /> | <img src="./mobile_notes.png" width="100%" /> |
 
-<p align="center"><em>Mobile-first stacked views with minimalist text navigation.</em></p>
+<p align="center"><em>Mobile-first stacked views with minimalist text navigation and focused article reading.</em></p>
 
 ## Why OpenBook
 
