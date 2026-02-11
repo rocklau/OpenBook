@@ -114,6 +114,44 @@ node --test test/integration.test.js
 | `/api/activity` | GET | Fetch activity log (Favorites, Notes, Highlights) |
 | `/api/export/markdown` | GET | Export activity as Markdown review |
 
+## Screenshot Maintenance Playbook (Actionbook)
+
+This project uses README screenshots as part of product communication. The workflow below is based on real maintenance experience.
+
+### Recommended workflow
+
+1. Start app locally:
+   ```bash
+   npm start
+   ```
+2. Search Actionbook manual first (required by Actionbook best practice):
+   ```bash
+   actionbook search "openbook screenshot" --url http://localhost:3000
+   ```
+3. If no manual exists for local pages, use fallback:
+   - `actionbook browser snapshot`
+   - then `actionbook browser click/fill/eval` based on current page state
+4. Capture desktop screenshots:
+   - `reader_interface.png`
+   - `notes_interface.png`
+5. Capture mobile screenshots in separate states:
+   - `mobile_feeds.png`
+   - `mobile_reader.png`
+   - `mobile_notes.png`
+6. Always close browser session:
+   ```bash
+   actionbook browser close
+   ```
+
+### Actionbook lessons learned (important)
+
+- **Action Manual first**: even for familiar pages, run `actionbook search` first. Localhost often has no indexed manual, so fallback is expected.
+- **`wait-nav` can timeout on SPA pages**: OpenBook is state-driven and may not trigger full navigation; prefer `snapshot`/state checks over relying only on navigation waits.
+- **Mobile screenshots can accidentally look identical**: if view state is not switched correctly, feeds/reader screenshots may duplicate. Explicitly switch states before each capture.
+- **Use app view functions for deterministic state**: for this codebase, `switchToReaderView()`, `switchToNotesView()`, `toggleMobileSidebar(true)`, `closeMobileSidebar()` are reliable for screenshot setup.
+- **Stable README rendering**: Markdown table layout is more consistent than free-floating `<img>` tags across GitHub widths.
+- **Keep commits focused**: include screenshot assets used by README; exclude temp/debug files.
+
 ## Documentation
 
 For architecture notes and implementation lessons (unified interface, mobile behavior, state-driven layout), see [AGENTS.md](./Agents.md).
