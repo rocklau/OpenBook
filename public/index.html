@@ -356,6 +356,9 @@
     <ul class="activity-panel-list" id="activityPanelList"></ul>
   </aside>
 
+  <button id="highlightBtn" class="highlight-pop" style="display:none" onclick="clipHighlight()">Highlight</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script>
     let feeds = [];
     let articles = [];
@@ -377,6 +380,11 @@
       await loadFeeds();
       await loadArticlesByDate(new Date());
       setupHashRouter();
+      setupHighlightPopover();
+
+      if (document.body.classList.contains('body-view-notes')) {
+        refreshNotes();
+      }
     }
 
     async function loadFeeds() {
@@ -492,26 +500,27 @@
             <button class="action-btn" onclick="saveNote()">Save</button>
           </div>
         </div>
-        <button id="highlightBtn" class="highlight-pop" style="display:none" onclick="clipHighlight()">Highlight</button>
         </div>
       `;
 
       if (hasFull) {
         col.innerHTML = actionsHtml + `<div class="content-body"><div class="content-body-inner" id="contentBody">${sanitizeHtml(hasFull)}</div></div>`;
-        setupHighlightPopover(document.getElementById('contentBody'));
       } else {
         col.innerHTML = actionsHtml + `<iframe class="content-iframe" src="${article.link}"></iframe>`;
       }
     }
 
     // --- Notes Logic ---
-    let notesOffset = 0, notesLimit = 30, notesFinished = false;
+    let notesOffset = 0, notesLimit = 30, notesFinished = false, notesLoading = false;
 
     function switchToNotesView() {
       document.body.classList.add('body-view-notes');
       document.getElementById('navReader').classList.remove('active');
       document.getElementById('navNotes').classList.add('active');
-      refreshNotes(); // Always refresh to show latest activity
+      
+      // Clear before refresh to show immediate feedback
+      document.getElementById('notesWaterfall').innerHTML = '';
+      refreshNotes(); 
     }
 
     function switchToReaderView() {
@@ -527,7 +536,8 @@
     }
 
     async function loadMoreNotes() {
-      if (notesFinished) return;
+      if (notesFinished || notesLoading) return;
+      notesLoading = true;
       document.getElementById('notesLoading').style.display = 'block';
       try {
         const res = await fetch(`/api/activity?limit=${notesLimit}&offset=${notesOffset}`);
@@ -576,9 +586,13 @@
         
         notesOffset += items.length;
         if (items.length < notesLimit) notesFinished = true;
+      } catch (e) {
+        console.error('Error loading notes:', e);
+      } finally {
+        notesLoading = false;
         document.getElementById('notesLoading').style.display = notesFinished ? 'none' : 'block';
-        document.getElementById('notesMoreBtn').style.display = notesFinished ? 'none' : 'block';
-      } catch (e) {}
+        document.getElementById('notesMoreBtn').style.display = (notesFinished || notesOffset === 0) ? 'none' : 'block';
+      }
     }
 
     function copyNoteMD(title, link, time, desc) {
@@ -657,13 +671,22 @@
       });
     }
 
-    function setupHighlightPopover(container) {
+    function setupHighlightPopover() {
       const btn = document.getElementById('highlightBtn');
-      container.addEventListener('mouseup', (e) => {
-        const s = window.getSelection().toString();
-        if (s && s.trim().length > 3) {
-          btn.style.left = e.clientX + 'px'; btn.style.top = (e.clientY - 40) + 'px'; btn.style.display = 'block';
-        } else btn.style.display = 'none';
+      document.addEventListener('mouseup', () => {
+        const s = window.getSelection();
+        const text = s.toString().trim();
+        const content = document.getElementById('contentBody');
+        if (text && text.length > 3 && content && content.contains(s.anchorNode)) {
+          const range = s.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          btn.style.left = (rect.left + rect.width / 2 - btn.offsetWidth / 2) + 'px';
+          btn.style.top = (rect.top + window.scrollY - 45) + 'px';
+          btn.style.position = 'absolute';
+          btn.style.display = 'block';
+        } else {
+          btn.style.display = 'none';
+        }
       });
     }
 
