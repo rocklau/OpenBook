@@ -360,7 +360,11 @@ app.post('/api/article/note', (req, res) => {
     stmtLogActivity.run(
       ACTIVITY_TYPES.NOTE,
       articleId,
-      JSON.stringify({ notePath: filePath, title: title || null })
+      JSON.stringify({ 
+        notePath: filePath, 
+        title: title || null,
+        content: content || null // Include content for quick preview in activity feed
+      })
     );
 
     res.json({ ok: true, articleId, notePath: filePath });

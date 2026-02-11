@@ -5,26 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenBook - Your Personal RSS Reader & Knowledge Collector</title>
-  <meta name="description"
-    content="OpenBook is a clean, indie-style RSS reader and knowledge collector. Capture, materialize, and organize articles as Markdown for your personal archive.">
-  <meta name="keywords" content="RSS reader, Knowledge Management, Personal Archive, Markdown, Indie Web, OpenBook">
-  <link rel="canonical" href="http://localhost:3000/">
-
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="http://localhost:3000/">
-  <meta property="og:title" content="OpenBook - Your Personal RSS Reader & Knowledge Collector">
-  <meta property="og:description"
-    content="A personal RSS reader that helps you capture and organize articles for long-term reference.">
-  <meta property="og:image" content="http://localhost:3000/image.png">
-
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="http://localhost:3000/">
-  <meta property="twitter:title" content="OpenBook - Your Personal RSS Reader & Knowledge Collector">
-  <meta property="twitter:description"
-    content="A personal RSS reader that helps you capture and organize articles for long-term reference.">
-  <meta property="twitter:image" content="http://localhost:3000/image.png">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
   <style>
     * {
@@ -34,7 +14,6 @@
     }
 
     :root {
-      /* Indie Style - Warm, minimal, literary */
       --bg-primary: #f7f3ed;
       --bg-secondary: #faf8f5;
       --bg-sidebar: #faf8f5;
@@ -51,11 +30,6 @@
       --font-family: 'Georgia', 'Times New Roman', 'Songti SC', 'SimSun', serif;
     }
 
-    * {
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
     body {
       font-family: var(--font-family);
       background: var(--bg-primary);
@@ -63,19 +37,7 @@
       line-height: 1.7;
       min-height: 100vh;
       font-size: 15px;
-    }
-
-
-    .header h1 {
-      font-size: 1rem;
-      font-weight: 500;
-      letter-spacing: 0.05em;
-      color: var(--text-primary);
-      text-transform: uppercase;
-    }
-
-    .header-actions {
-      display: none;
+      -webkit-font-smoothing: antialiased;
     }
 
     .container {
@@ -85,7 +47,7 @@
       width: 100%;
     }
 
-
+    /* Sidebar */
     .sidebar {
       background: var(--bg-sidebar);
       border-right: 1px solid var(--border-color);
@@ -102,13 +64,34 @@
       border-bottom: 1px solid var(--border-color);
     }
 
-    .sidebar-header h2 {
-      font-size: 0.7rem;
+    .nav-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      background: var(--bg-primary);
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-toggle-btn {
+      flex: 1;
+      padding: 0.4rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: var(--font-family);
       color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      margin-bottom: 0.75rem;
-      font-weight: 400;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .nav-toggle-btn.active {
+      background: var(--bg-secondary);
+      color: var(--accent-color);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .feed-search {
@@ -123,49 +106,28 @@
       font-family: var(--font-family);
     }
 
-    .feed-search:focus {
-      border-color: var(--accent-color);
-    }
-
     .feed-list {
       list-style: none;
-      overflow-y: auto;
       flex: 1;
       padding: 0.75rem;
+      overflow-y: auto;
     }
 
     .feed-item {
       padding: 0.6rem 0.5rem;
       cursor: pointer;
-      transition: all 0.15s;
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      border-bottom: 1px solid transparent;
-    }
-
-    .feed-item:hover {
-      color: var(--accent-color);
-    }
-
-    .feed-item.active {
-      color: var(--accent-color);
-      font-weight: 500;
-    }
-
-    .feed-item .name {
-      flex: 1;
       font-size: 0.85rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      color: var(--text-secondary);
+      border-radius: 4px;
     }
 
-    .feed-item .count {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    }
+    .feed-item:hover { color: var(--accent-color); background: var(--item-hover); }
+    .feed-item.active { color: var(--accent-color); font-weight: 500; background: var(--item-active); }
+    .feed-item .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-item .count { font-size: 0.7rem; color: var(--text-muted); }
 
     .sidebar-footer {
       padding: 1rem;
@@ -173,37 +135,22 @@
       font-size: 0.75rem;
       color: var(--text-muted);
       text-align: center;
-      letter-spacing: 0.05em;
     }
 
+    /* Article List Col */
     .article-list-col {
       background: var(--bg-primary);
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
+      height: 100vh;
       position: sticky;
       top: 0;
-      height: 100vh;
-      overflow-y: auto;
     }
 
     .article-list-header {
       padding: 1.5rem;
-      background: var(--bg-primary);
       border-bottom: 1px solid var(--border-color);
-    }
-
-    .article-list-header h3 {
-      font-size: 0.8rem;
-      color: var(--text-primary);
-      margin-bottom: 0.25rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-    }
-
-    .article-list-header .subtitle {
-      font-size: 0.75rem;
-      color: var(--text-muted);
     }
 
     .date-nav {
@@ -216,854 +163,197 @@
     .date-nav-btn {
       background: transparent;
       border: 1px solid var(--border-color);
-      color: var(--text-secondary);
       width: 28px;
       height: 28px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
     }
 
-    .date-nav-btn:hover {
-      background: var(--item-hover);
-      border-color: var(--accent-color);
-      color: var(--accent-color);
-    }
+    .current-date { font-size: 0.85rem; font-weight: 500; }
+    .subtitle { font-size: 0.75rem; color: var(--text-muted); }
 
-    /* Indie action bar (Reader ↔ Notes) */
-    .actionbar {
-      position: sticky;
-      top: 0;
-      z-index: 3;
-      background: rgba(247, 243, 237, 0.92);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 10px 0;
-    }
-
-    .actionbar-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .actionbar-left {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .actionbar-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .action-btn {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      padding: 0.38rem 0.55rem;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-primary);
-      font-family: var(--font-family);
-      font-size: 0.82rem;
-      letter-spacing: 0.02em;
-      transition: all 0.15s;
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .action-btn:hover {
-      background: var(--item-hover);
-      border-color: var(--accent-color);
-    }
-
-    .action-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.82rem;
-      border-bottom: 1px solid transparent;
-      white-space: nowrap;
-    }
-
-    .action-link:hover {
-      border-bottom-color: var(--border-color);
-    }
-
-    .activity-panel {
-      position: fixed;
-      top: 72px;
-      right: 18px;
-      width: min(360px, calc(100vw - 36px));
-      max-height: calc(100vh - 92px);
-      overflow: hidden;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
-      z-index: 1100;
-      display: none;
-      flex-direction: column;
-    }
-
-    .activity-panel.show {
-      display: flex;
-    }
-
-    .activity-panel-header {
-      padding: 0.7rem 0.85rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.83rem;
-    }
-
-    .activity-panel-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      overflow: auto;
-    }
-
-    .activity-panel-item {
-      border-bottom: 1px solid var(--border-color);
-      padding: 0.65rem 0.85rem;
-      font-size: 0.78rem;
-      line-height: 1.45;
-    }
-
-    .activity-panel-item:last-child {
-      border-bottom: none;
-    }
-
-    .activity-type {
-      color: var(--accent-color);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.2rem;
-    }
-
-    .activity-time {
-      color: var(--text-muted);
-      font-size: 0.7rem;
-      margin-top: 0.2rem;
-    }
-
-    .highlight-pop {
-      position: fixed;
-      z-index: 9999;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      padding: 0.35rem 0.55rem;
-      border-radius: 8px;
-      cursor: pointer;
-      color: var(--text-primary);
-      font-family: var(--font-family);
-      font-size: 0.82rem;
-      box-shadow: var(--shadow);
-    }
-
-    .highlight-pop:hover {
-      border-color: var(--accent-color);
-    }
-
-    .current-date {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      letter-spacing: 0.02em;
-    }
-
-    .article-list {
-      list-style: none;
-      overflow-y: auto;
-      flex: 1;
-    }
-
+    .article-list { list-style: none; overflow-y: auto; flex: 1; }
     .article-item {
       padding: 1.25rem 1.5rem;
       border-bottom: 1px solid var(--border-color);
       cursor: pointer;
-      transition: all 0.15s;
-      background: var(--bg-primary);
     }
+    .article-item:hover { background: var(--item-hover); }
+    .article-item.active { background: var(--item-active); }
+    .article-item.is-read .article-item-title { color: var(--text-muted); font-weight: 400; }
+    .article-item-title { font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .article-item-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); }
 
-    .article-item:hover {
-      background: var(--item-hover);
-    }
-
-    .article-item.active {
-      background: var(--item-active);
-    }
-
-    .article-item.is-read .article-item-title {
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
-    .article-item-title {
-      font-size: 0.9rem;
-      color: var(--text-primary);
-      line-height: 1.5;
-      margin-bottom: 0.4rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      font-weight: 400;
-    }
-
-    .article-item-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      letter-spacing: 0.03em;
-    }
-
+    /* Content Col */
     .content-col {
       background: var(--bg-secondary);
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-      min-width: 0;
+      height: 100vh;
+      overflow-y: auto;
     }
 
-    .content-header {
-      padding: 1.5rem 2rem;
+    .actionbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(247, 243, 237, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+    }
+
+    .actionbar-inner { display: flex; justify-content: space-between; align-items: center; }
+    .actionbar-left, .actionbar-right { display: flex; gap: 8px; align-items: center; }
+
+    .action-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: var(--font-family);
+    }
+    .action-btn:hover { border-color: var(--accent-color); }
+
+    .content-body { padding: 3rem 2rem; }
+    .content-body-inner { max-width: 720px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; }
+    .content-body h1 { font-size: 2rem; margin: 2rem 0; }
+    .content-body p { margin-bottom: 1.5rem; }
+    .content-body a { color: var(--accent-color); }
+    .content-iframe { width: 100%; height: 100vh; border: none; }
+
+    /* Notes View Integration */
+    .notes-col {
+      grid-column: 2 / 4;
+      background: var(--bg-primary);
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+    }
+
+    .body-view-notes .notes-col { display: flex; }
+    .body-view-notes .article-list-col, .body-view-notes .content-col { display: none; }
+
+    .notes-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(247, 243, 237, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 1rem;
+      align-items: center;
+    }
+
+    .notes-content { padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+    .notes-waterfall { column-count: 2; column-gap: 20px; }
+    @media (min-width: 1400px) { .notes-waterfall { column-count: 3; } }
+
+    .note-card {
+      break-inside: avoid;
+      margin-bottom: 20px;
       background: var(--bg-secondary);
-    }
-
-    .content-title-section {
-      flex: 1;
-    }
-
-    .content-title {
-      font-size: 1.3rem;
-      font-weight: 400;
-      color: var(--text-primary);
-      line-height: 1.5;
-      margin-bottom: 0.75rem;
-    }
-
-    .content-title a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .content-title a:hover {
-      color: var(--accent-color);
-    }
-
-    .content-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      letter-spacing: 0.02em;
-    }
-
-    .content-actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-shrink: 0;
-    }
-
-    .icon-btn {
-      padding: 0.4rem 0.8rem;
       border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.75rem;
-      transition: all 0.15s;
-      color: var(--text-secondary);
-      font-family: var(--font-family);
-      letter-spacing: 0.03em;
-    }
-
-    .icon-btn:hover {
-      background: var(--item-hover);
-      border-color: var(--accent-color);
-      color: var(--accent-color);
-    }
-
-    .content-body {
-      padding: 3rem 2rem;
-      font-size: 1.1rem;
-      line-height: 1.8;
-      color: var(--text-primary);
-      width: 100%;
-    }
-
-    .content-body-inner {
-      max-width: 720px;
-      margin: 0 auto;
-    }
-
-    .content-body h1 {
-      font-size: 2rem;
-      line-height: 1.3;
-      margin: 2rem 0 1.5rem;
-    }
-
-    .content-body h2 {
-      font-size: 1.6rem;
-      line-height: 1.4;
-      margin: 2rem 0 1rem;
-      font-weight: 500;
-    }
-
-    .content-body h3 {
-      font-size: 1.3rem;
-      margin: 1.5rem 0 1rem;
-    }
-
-    .content-body p {
-      margin-bottom: 1.5rem;
-    }
-
-    .content-body img,
-    .content-body video,
-    .content-body iframe:not(.content-iframe) {
-      max-width: 100% !important;
-      height: auto !important;
-      border-radius: 4px;
-      margin: 2rem 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      display: block;
-    }
-
-    .content-body a {
-      color: var(--accent-color);
-      text-decoration: underline;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 4px;
-    }
-
-    .content-body a:hover {
-      color: var(--accent-hover);
-    }
-
-    .content-body blockquote {
-      border-left: 2px solid var(--accent-color);
-      padding: 0.5rem 0 0.5rem 1.5rem;
-      margin: 2rem 0;
-      color: var(--text-secondary);
-      font-style: italic;
-      font-size: 1.15rem;
-    }
-
-    .content-body pre {
-      background: #fdfcfb;
-      padding: 1.25rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin: 2rem 0;
-      border: 1px solid var(--border-color);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    .content-body code {
-      background: rgba(139, 105, 20, 0.08);
-      padding: 0.2rem 0.4rem;
-      border-radius: 3px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.9em;
-      color: var(--accent-color);
-    }
-
-    /* iframe embed styles */
-    .content-iframe {
-      width: 100%;
-      height: 100vh;
-      border: none;
-      background: var(--bg-primary);
-    }
-
-    .iframe-notice {
-      background: var(--item-active);
-      border-left: 2px solid var(--accent-color);
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    .iframe-notice a {
-      color: var(--accent-color);
-      text-decoration: none;
-    }
-
-    .iframe-notice a:hover {
-      text-decoration: underline;
-    }
-
-    .external-link-btn {
-      background: transparent;
-      color: var(--accent-color);
-      border: 1px solid var(--accent-color);
-      padding: 0.4rem 0.8rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      margin-top: 1rem;
-      font-family: var(--font-family);
-      letter-spacing: 0.03em;
-    }
-
-    .external-link-btn:hover {
-      background: var(--accent-color);
-      color: white;
-    }
-
-    .view-toggle {
-      display: flex;
-      gap: 0.25rem;
-      background: var(--bg-primary);
-      padding: 0.25rem;
-      border-radius: 6px;
-    }
-
-    .view-toggle-btn {
-      padding: 0.4rem 0.8rem;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .view-toggle-btn.active {
-      background: var(--bg-secondary);
-      color: var(--accent-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* iframe error state */
-    .iframe-error {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      padding: 2rem;
-      text-align: center;
-      color: var(--text-secondary);
-      margin: 1rem;
-    }
-
-    /* Empty state */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: var(--text-muted);
-      text-align: center;
-      padding: 2rem;
-    }
-
-    .empty-state h3 {
-      font-size: 0.95rem;
-      margin-bottom: 0.5rem;
-      color: var(--text-secondary);
-      font-weight: 400;
-      letter-spacing: 0.05em;
-    }
-
-    .empty-state p {
-      font-size: 0.8rem;
-    }
-
-    .loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: var(--text-muted);
-    }
-
-    .spinner {
-      border: 3px solid var(--bg-primary);
-      border-top: 3px solid var(--accent-color);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 1rem;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* Better Note Editor Styling */
-    .note-editor-container {
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 95%;
-      max-width: 720px;
-      background: #fff;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      display: none;
-      z-index: 100;
-      margin-top: 10px;
-    }
-
-    .note-editor-container.active {
-      display: block;
-    }
-
-    .note-editor-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .note-editor-header h4 {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-weight: 500;
-    }
-
-    .note-editor-textarea {
-      width: 100%;
-      min-height: 120px;
-      border: 1px solid #eee;
-      border-radius: 4px;
-      padding: 0.75rem;
-      font-family: var(--font-family);
-      font-size: 1rem;
-      line-height: 1.6;
-      resize: vertical;
-      outline: none;
-      background: #fafafa;
-      transition: border-color 0.2s;
-    }
-
-    .note-editor-textarea:focus {
-      border-color: var(--accent-color);
-      background: #fff;
-    }
-
-    .note-editor-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Scrollbar styles */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 3px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--text-muted);
-    }
-
-    .read-mode-indicator {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      background: var(--bg-header);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      border-radius: 10px;
+      padding: 16px;
       box-shadow: var(--shadow);
     }
+    .note-card .meta { display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 10px; color: var(--text-muted); }
+    .note-card .type { text-transform: uppercase; color: var(--accent-color); font-weight: 500; }
+    .note-card .title { font-size: 0.95rem; font-weight: 500; margin-bottom: 8px; }
+    .note-card .desc { font-size: 0.85rem; color: var(--text-secondary); white-space: pre-wrap; margin-bottom: 12px; }
+    .note-card .actions { display: flex; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); }
 
-    /* Hide Mobile UI by default */
-    .mobile-nav,
-    .backdrop {
-      display: none;
-    }
+    /* Highlights & Toast */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-header); color: white; padding: 0.75rem 1.5rem; border-radius: 50px; font-size: 0.9rem; z-index: 10000; opacity: 0; transition: all 0.4s; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    
+    .highlight-pop { position: fixed; z-index: 9999; background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.4rem 0.6rem; border-radius: 8px; font-size: 0.8rem; box-shadow: var(--shadow); cursor: pointer; }
 
-    /* Mobile Responsive Styles */
-    @media (max-width: 768px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
+    /* Note Editor */
+    .note-editor-container { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); width: 95%; max-width: 600px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; z-index: 100; margin-top: 10px; }
+    .note-editor-container.active { display: block; }
+    .note-editor-textarea { width: 100%; min-height: 120px; border: 1px solid #eee; border-radius: 4px; padding: 0.75rem; font-family: var(--font-family); font-size: 1rem; outline: none; resize: vertical; }
 
-      .sidebar,
-      .article-list-col {
-        position: fixed;
-        left: 0;
-        top: 0;
-        z-index: 1000;
-        width: 85%;
-        max-width: 320px;
-        height: 100vh;
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
-      }
+    /* Activity Panel */
+    .activity-panel { position: fixed; top: 72px; right: 18px; width: 320px; max-height: 80vh; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 1100; display: none; flex-direction: column; }
+    .activity-panel.show { display: flex; }
+    .activity-panel-header { padding: 0.8rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+    .activity-panel-list { list-style: none; overflow-y: auto; flex: 1; }
+    .activity-panel-item { padding: 0.8rem; border-bottom: 1px solid var(--border-color); font-size: 0.8rem; }
 
-      .sidebar.mobile-open,
-      .article-list-col.mobile-open {
-        transform: translateX(0);
-      }
-
-      .article-list-col {
-        z-index: 1001;
-      }
-
-      .backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(44, 36, 25, 0.4);
-        backdrop-filter: blur(2px);
-        z-index: 999;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-
-      .backdrop.show {
-        display: block;
-        opacity: 1;
-      }
-
-      .mobile-nav {
-        display: flex;
-        position: fixed;
-        bottom: 1.5rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1002;
-        background: white;
-        padding: 0.4rem;
-        border-radius: 3rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        border: 1px solid var(--border-color);
-        gap: 0.25rem;
-      }
-
-      .mobile-nav-btn {
-        padding: 0.6rem 1rem;
-        border: none;
-        background: transparent;
-        color: var(--text-secondary);
-        border-radius: 2rem;
-        font-size: 0.85rem;
-        font-family: var(--font-family);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        white-space: nowrap;
-      }
-
-      .mobile-nav-btn.active {
-        background: var(--bg-header);
-        color: white;
-      }
-
-      .content-header {
-        padding: 1rem;
-        padding-top: 2rem;
-      }
-
-      .activity-panel {
-        top: auto;
-        right: 0;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        max-height: 55vh;
-        border-radius: 14px 14px 0 0;
-      }
-
-      .content-body {
-        padding: 2rem 1rem;
-      }
-
-      .content-title {
-        font-size: 1.2rem;
-      }
-    }
-
-    /* Premium Toast Notification */
-    .toast {
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--bg-header);
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 50px;
-      font-size: 0.9rem;
-      z-index: 10000;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-      opacity: 0;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    .toast-icon {
-      font-size: 1.1rem;
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border-width: 0;
-    }
+    /* Empty/Loading */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; padding: 2rem; }
+    .spinner { border: 3px solid var(--bg-primary); border-top: 3px solid var(--accent-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 
 <body>
-
-  <h1 class="sr-only">OpenBook RSS Reader</h1>
-  <div class="backdrop" id="backdrop" onclick="closeAllMobile()"></div>
-  <div id="toast" class="toast"><span class="toast-icon">✨</span><span id="toastMsg"></span></div>
-
-  <div class="mobile-nav">
-    <button class="mobile-nav-btn" onclick="toggleMobileSidebar()" id="btnFeeds">
-      <span>📁</span> Feeds
-    </button>
-    <button class="mobile-nav-btn" onclick="toggleMobileArticleList()" id="btnArticles">
-      <span>📰</span> List
-    </button>
-  </div>
+  <div id="toast" class="toast"><span id="toastMsg"></span></div>
 
   <div class="container">
-    <!-- Sidebar: Feeds -->
-    <aside class="sidebar" id="sidebar">
+    <!-- Column 1: Sidebar -->
+    <aside class="sidebar">
       <div class="sidebar-header">
-        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
-          <h2>Feeds</h2>
-          <a href="/notes.html"
-            style="font-size:0.72rem; color: var(--text-muted); text-decoration:none; border-bottom:1px solid transparent;"
-            onmouseover="this.style.borderBottomColor='var(--border-color)'"
-            onmouseout="this.style.borderBottomColor='transparent'">Notes</a>
+        <div class="nav-toggle">
+          <button id="navReader" class="nav-toggle-btn active" onclick="switchToReaderView()">Reader</button>
+          <button id="navNotes" class="nav-toggle-btn" onclick="switchToNotesView()">Notes</button>
         </div>
         <input type="text" class="feed-search" placeholder="Search feeds..." id="feedSearch" oninput="filterFeeds()">
       </div>
-      <ul class="feed-list" id="feedList">
-
-      </ul>
-      <div class="sidebar-footer">
-        <span id="feedStats">Loading...</span>
-      </div>
+      <ul class="feed-list" id="feedList"></ul>
+      <div class="sidebar-footer" id="feedStats">Loading feeds...</div>
     </aside>
 
-    <!-- Article List -->
+    <!-- Column 2: Article List -->
     <section class="article-list-col" id="articleListCol">
       <div class="article-list-header">
         <div class="date-nav">
-          <button class="date-nav-btn" onclick="changeDate(-1)" title="Previous day">←</button>
+          <button class="date-nav-btn" onclick="changeDate(-1)">←</button>
           <span class="current-date" id="currentDate">Today</span>
-          <button class="date-nav-btn" onclick="changeDate(1)" title="Next day">→</button>
+          <button class="date-nav-btn" onclick="changeDate(1)">→</button>
         </div>
         <div class="subtitle" id="listSubtitle">0 articles</div>
-        <div style="margin-top:6px; font-size:0.78rem;">
-          <a href="/notes.html"
-            style="color: var(--text-muted); text-decoration:none; border-bottom:1px solid transparent;"
-            onmouseover="this.style.borderBottomColor='var(--border-color)'"
-            onmouseout="this.style.borderBottomColor='transparent'">Notes</a>
-        </div>
       </div>
-      <ul class="article-list" id="articleList">
-        <li class="empty-state">
-          <h3>No articles</h3>
-          <p>Select a feed to view articles</p>
-        </li>
-      </ul>
+      <ul class="article-list" id="articleList"></ul>
     </section>
 
-    <!-- Content -->
+    <!-- Column 3: Content -->
     <section class="content-col" id="contentCol">
       <div class="empty-state">
         <h3>Select an Article</h3>
-        <p>Choose an article from the list to view its content</p>
+      </div>
+    </section>
+
+    <!-- Unified Notes View (Covers Col 2 & 3) -->
+    <section class="notes-col" id="notesCol">
+      <div class="notes-header">
+        <h2 style="font-size:1.1rem; font-weight:500;">Notes Waterfall</h2>
+        <div style="display:flex; gap:10px;">
+          <button class="action-btn" onclick="copyWeekly()">Copy Weekly</button>
+          <button class="action-btn" onclick="exportWeekly()">Export MD</button>
+          <button class="action-btn" onclick="refreshNotes()">Refresh</button>
+        </div>
+      </div>
+      <div class="notes-content">
+        <div id="notesWaterfall" class="notes-waterfall"></div>
+        <div id="notesLoading" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading...</div>
+        <div style="text-align:center;"><button id="notesMoreBtn" class="action-btn" style="display:none" onclick="loadMoreNotes()">Load More</button></div>
       </div>
     </section>
   </div>
 
   <aside class="activity-panel" id="activityPanel">
-    <div class="activity-panel-header">
-      <strong>Recent Activity</strong>
-      <button class="action-btn" style="padding:0.28rem 0.45rem;" onclick="toggleActivityPanel(false)">Close</button>
-    </div>
-    <ul class="activity-panel-list" id="activityPanelList">
-      <li class="activity-panel-item">Loading…</li>
-    </ul>
+    <div class="activity-panel-header"><strong>Activity Log</strong><button class="action-btn" onclick="toggleActivityPanel(false)">×</button></div>
+    <ul class="activity-panel-list" id="activityPanelList"></ul>
   </aside>
 
   <script>
@@ -1074,159 +364,19 @@
     let currentArticles = [];
     let currentDate = new Date();
     let isDateFilterMode = true;
-    let isActivityPanelOpen = false;
 
-    function showToast(msg, icon = '✨') {
+    function showToast(msg) {
       const t = document.getElementById('toast');
-      const tm = document.getElementById('toastMsg');
-      const ti = t.querySelector('.toast-icon');
-
-      tm.textContent = msg;
-      ti.textContent = icon;
+      document.getElementById('toastMsg').textContent = msg;
       t.classList.add('show');
-
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => {
-        t.classList.remove('show');
-      }, 2500);
+      setTimeout(() => t.classList.remove('show'), 2500);
     }
 
-    // Initialize
+    // --- Reader Logic ---
     async function init() {
       await loadFeeds();
       await loadArticlesByDate(new Date());
-      await refreshActivityPanel();
-
-      // Add escape key to close mobile overlays
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeAllMobile();
-      });
-    }
-
-    function toggleMobileSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      const backdrop = document.getElementById('backdrop');
-      const btn = document.getElementById('btnFeeds');
-      const isOpen = sidebar.classList.contains('mobile-open');
-
-      closeAllMobile();
-
-      if (!isOpen) {
-        sidebar.classList.add('mobile-open');
-        backdrop.classList.add('show');
-        btn.classList.add('active');
-      }
-    }
-
-    function toggleMobileArticleList() {
-      const list = document.getElementById('articleListCol');
-      const backdrop = document.getElementById('backdrop');
-      const btn = document.getElementById('btnArticles');
-      const isOpen = list.classList.contains('mobile-open');
-
-      closeAllMobile();
-
-      if (!isOpen) {
-        list.classList.add('mobile-open');
-        backdrop.classList.add('show');
-        btn.classList.add('active');
-      }
-    }
-
-    function closeAllMobile() {
-      document.getElementById('sidebar').classList.remove('mobile-open');
-      document.querySelectorAll('.article-list-col').forEach(el => el.classList.remove('mobile-open'));
-      document.getElementById('backdrop').classList.remove('show');
-      document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
-    }
-
-    // Filter articles by date
-    function filterArticlesByDate(date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      return articles.filter(article => {
-        if (!article.pubDate) return false;
-        const articleDate = new Date(article.pubDate);
-        return articleDate >= startOfDay && articleDate <= endOfDay;
-      });
-    }
-
-    // Load articles for a specific date
-    async function loadArticlesByDate(date) {
-      currentDate = date;
-      isDateFilterMode = true;
-      currentFeed = 'date';
-
-      const articleList = document.getElementById('articleList');
-      articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
-
-      // Update date display
-      updateDateDisplay();
-
-      try {
-        // Use the date-specific API endpoint
-        const dateStr = date.toISOString().split('T')[0];
-        const res = await fetch(`/api/articles/by-date?date=${dateStr}`);
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        currentArticles = await res.json();
-
-        // Also update the global articles cache if empty
-        if (articles.length === 0) {
-          articles = currentArticles;
-        }
-
-        document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
-        renderArticleList(currentArticles);
-        renderFeedList();
-      } catch (err) {
-        console.error('Failed to load articles:', err);
-        articleList.innerHTML = `
-          <li class="empty-state">
-            <h3>Failed to load</h3>
-            <p>${err.message}</p>
-          </li>
-        `;
-      }
-    }
-
-    // Update the date display in header
-    function updateDateDisplay() {
-      const dateEl = document.getElementById('currentDate');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const selectedDate = new Date(currentDate);
-      selectedDate.setHours(0, 0, 0, 0);
-
-      if (selectedDate.getTime() === today.getTime()) {
-        dateEl.textContent = 'Today';
-      } else if (selectedDate.getTime() === yesterday.getTime()) {
-        dateEl.textContent = 'Yesterday';
-      } else {
-        dateEl.textContent = selectedDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          weekday: 'short'
-        });
-      }
-    }
-
-    // Change date (delta: -1 for previous, +1 for next)
-    function changeDate(delta) {
-      const newDate = new Date(currentDate);
-      newDate.setDate(newDate.getDate() + delta);
-      loadArticlesByDate(newDate);
+      setupHashRouter();
     }
 
     async function loadFeeds() {
@@ -1234,539 +384,319 @@
         const res = await fetch('/api/feeds');
         feeds = await res.json();
         renderFeedList();
-      } catch (err) {
-      }
+      } catch (e) {}
     }
 
     function renderFeedList() {
       const list = document.getElementById('feedList');
-      const articleCounts = {};
-
-      articles.forEach(a => {
-        const feedName = a.feedName || a.feedTitle;
-        articleCounts[feedName] = (articleCounts[feedName] || 0) + 1;
-      });
-
-      const filteredFeeds = filterFeedList();
-
-      const html = `
-        <li class="feed-item ${isDateFilterMode ? 'active' : ''}" data-index="all" onclick="selectFeed('all')">
+      const search = document.getElementById('feedSearch').value.toLowerCase();
+      const filtered = feeds.filter(f => f.name.toLowerCase().includes(search));
+      
+      list.innerHTML = `
+        <li class="feed-item ${currentFeed === 'all' ? 'active' : ''}" onclick="selectFeed('all')">
           <span class="name">By Date</span>
-          <span class="count" id="dateCount">${filterArticlesByDate(new Date()).length}</span>
         </li>
-        ${filteredFeeds.map((feed, i) => `
-          <li class="feed-item ${!isDateFilterMode && currentFeed === i ? 'active' : ''}" data-index="${i}" onclick="selectFeed(${i})">
-            <span class="name">${escapeHtml(feed.name)}</span>
+        ${filtered.map((f, i) => `
+          <li class="feed-item ${currentFeed === i ? 'active' : ''}" onclick="selectFeed(${feeds.indexOf(f)})">
+            <span class="name">${f.name}</span>
           </li>
         `).join('')}
       `;
-      list.innerHTML = html;
-
-      document.getElementById('feedStats').textContent = `${feeds.length} feeds · ${articles.length} articles`;
+      document.getElementById('feedStats').textContent = `${feeds.length} feeds`;
     }
 
-    function filterFeedList() {
-      const search = document.getElementById('feedSearch').value.toLowerCase();
-      if (!search) return feeds;
-      return feeds.filter(f => f.name.toLowerCase().includes(search));
-    }
-
-    function filterFeeds() {
-      renderFeedList();
-    }
+    function filterFeeds() { renderFeedList(); }
 
     async function selectFeed(index) {
+      currentFeed = index;
+      switchToReaderView();
       if (index === 'all') {
         loadArticlesByDate(new Date());
       } else {
-        currentFeed = index;
-        currentArticle = null;
-        isDateFilterMode = false;
-        renderFeedList();
-
-        const listSubtitle = document.getElementById('listSubtitle');
         const articleList = document.getElementById('articleList');
-        const contentCol = document.getElementById('contentCol');
-
-        // Reset date display to show feed name
-        document.getElementById('currentDate').textContent = feeds[index].name;
-
-        const feed = feeds[index];
-        listSubtitle.textContent = 'Loading...';
-        articleList.innerHTML = '<li class="loading"><div class="spinner"></div><p>Loading...</p></li>';
-
+        articleList.innerHTML = '<div class="spinner"></div>';
         try {
           const res = await fetch(`/api/feed/${index}`);
           const parsed = await res.json();
-          currentArticles = parsed.items.map(item => ({
-            ...item,
-            feedTitle: parsed.title,
-            feedName: feed.name
-          }));
-          listSubtitle.textContent = `${currentArticles.length} articles`;
+          currentArticles = parsed.items;
           renderArticleList(currentArticles);
-        } catch (err) {
-          articleList.innerHTML = `<li class="error">Failed to load: ${err.message}</li>`;
-        }
-
-        // Clear content area
-        contentCol.innerHTML = `
-          <div class="empty-state">
-            <h3>Select an Article</h3>
-            <p>Choose an article from the list to view its content</p>
-          </div>
-        `;
+          document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
+          document.getElementById('currentDate').textContent = feeds[index].name;
+        } catch (e) {}
       }
-
-      if (window.innerWidth <= 768) {
-        // Switch to list view on mobile
-        toggleMobileArticleList();
-      }
+      renderFeedList();
     }
 
-    // Render article list
+    async function loadArticlesByDate(date) {
+      currentDate = date;
+      const articleList = document.getElementById('articleList');
+      articleList.innerHTML = '<div class="spinner"></div>';
+      updateDateDisplay();
+      try {
+        const res = await fetch(`/api/articles/by-date?date=${date.toISOString().split('T')[0]}`);
+        currentArticles = await res.json();
+        renderArticleList(currentArticles);
+        document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
+      } catch (e) {}
+    }
+
+    function updateDateDisplay() {
+      const d = document.getElementById('currentDate');
+      const today = new Date().toISOString().split('T')[0];
+      const sel = currentDate.toISOString().split('T')[0];
+      d.textContent = today === sel ? 'Today' : currentDate.toLocaleDateString();
+    }
+
+    function changeDate(delta) {
+      currentDate.setDate(currentDate.getDate() + delta);
+      loadArticlesByDate(currentDate);
+    }
+
     function renderArticleList(items) {
       const list = document.getElementById('articleList');
-
-      if (items.length === 0) {
-        list.innerHTML = `
-          <li class="empty-state">
-            <h3>No articles</h3>
-          </li>
-        `;
-        return;
-      }
-
-      list.innerHTML = items.map((item, index) => `
-        <li class="article-item ${currentArticle?.link === item.link ? 'active' : ''} ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${index}, this)">
-          <div class="article-item-title">${escapeHtml(item.title)}</div>
-          <div class="article-item-meta">
-            ${item.isFavorite ? '<span style="color:#d4af37">⭐</span>' : ''}
-            <span>${escapeHtml(item.feedTitle || item.feedName || 'Unknown')}</span>
-            <span>${formatDate(item.pubDate)}</span>
-          </div>
+      list.innerHTML = items.map((item, i) => `
+        <li class="article-item ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${i}, this)">
+          <div class="article-item-title">${item.title}</div>
+          <div class="article-item-meta"><span>${item.feedName || ''}</span></div>
         </li>
       `).join('');
     }
 
-    function selectArticle(index, element) {
+    function selectArticle(index, el) {
       currentArticle = currentArticles[index];
-
-      if (!currentArticle) {
-        console.error('Article not found');
-        return;
-      }
-
-      document.querySelectorAll('.article-item').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
-
+      document.querySelectorAll('.article-item').forEach(li => li.classList.remove('active'));
+      el.classList.add('active');
       renderArticleContent(currentArticle);
-
-      // Auto mark as read if not already
-      if (!currentArticle.isRead && currentArticle.id) {
+      if (!currentArticle.isRead) {
         currentArticle.isRead = true;
-        element.classList.add('is-read');
-        apiPost('/api/article/state', { articleId: currentArticle.id, isRead: true }).catch(err => {
-          console.error('Failed to auto-mark read:', err);
-        });
-      }
-
-      if (window.innerWidth <= 768) {
-        closeAllMobile();
+        el.classList.add('is-read');
+        apiPost('/api/article/state', { articleId: currentArticle.id, isRead: true });
       }
     }
 
-    function renderArticleContent(article, forceView = null) {
-      const contentCol = document.getElementById('contentCol');
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // Global scroll to top
-      const hasFullContent = article.content || article['content:encoded'];
-      const hasSnippet = article.contentSnippet && article.contentSnippet.length > 50;
-
-      // Inline indie actions (read/fav/note/materialize)
+    function renderArticleContent(article) {
+      const col = document.getElementById('contentCol');
+      const hasFull = article.content || article['content:encoded'];
       const actionsHtml = `
-        <div class="actionbar">
-          <div class="actionbar-inner">
-            <div class="actionbar-left">
-              <button class="action-btn" onclick="toggleFavoriteCurrent()" title="Favorite and archive">⭐</button>
-              <button class="action-btn" onclick="createNoteForCurrent()" title="New note and archive">📝</button>
-            </div>
-            <div class="actionbar-right">
-              <button class="action-btn" onclick="toggleActivityPanel()" title="Show recent activity">Log</button>
-              <a class="action-link" href="/notes.html">Notes</a>
-            </div>
+        <div class="actionbar"><div class="actionbar-inner">
+          <div class="actionbar-left">
+            <button class="action-btn" onclick="toggleFavoriteCurrent()">⭐</button>
+            <button class="action-btn" onclick="openNoteEditor()">📝</button>
           </div>
-          <button class="highlight-pop" id="highlightBtn" onclick="clipSelectionToNote()" style="display:none" title="Save selection as highlight">Highlight</button>
-          
-          <div class="note-editor-container" id="noteEditor">
-            <div class="note-editor-header">
-              <h4>New Note</h4>
-              <span style="font-size:0.7rem; color:var(--text-muted);">Automatically mark as read and archive</span>
-            </div>
-            <textarea class="note-editor-textarea" id="noteTextarea" placeholder="Enter your thoughts here... (Markdown supported)"></textarea>
-            <div class="note-editor-footer">
-              <button class="action-btn" onclick="closeNoteEditor()" style="background:transparent; border-color:transparent; color:var(--text-muted);">Cancel</button>
-              <button class="action-btn" onclick="saveNoteFromEditor()" id="saveNoteBtn">Save Note</button>
-            </div>
+          <div class="actionbar-right"><button class="action-btn" onclick="toggleActivityPanel()">Log</button></div>
+        </div>
+        <div class="note-editor-container" id="noteEditor">
+          <textarea class="note-editor-textarea" id="noteTextarea" placeholder="Write a note..."></textarea>
+          <div style="margin-top:10px; display:flex; gap:10px; justify-content:flex-end;">
+            <button class="action-btn" onclick="closeNoteEditor()">Cancel</button>
+            <button class="action-btn" onclick="saveNote()">Save</button>
           </div>
+        </div>
+        <button id="highlightBtn" class="highlight-pop" style="display:none" onclick="clipHighlight()">Highlight</button>
         </div>
       `;
 
-      let viewMode = forceView;
-      if (!viewMode) {
-        viewMode = hasFullContent ? 'content' : 'iframe';
-      }
-
-
-      if (viewMode === 'iframe') {
-        contentCol.innerHTML = actionsHtml + `
-          <iframe class="content-iframe" src="${article.link}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" onerror="iframeError(this)"></iframe>
-        `;
+      if (hasFull) {
+        col.innerHTML = actionsHtml + `<div class="content-body"><div class="content-body-inner" id="contentBody">${sanitizeHtml(hasFull)}</div></div>`;
+        setupHighlightPopover(document.getElementById('contentBody'));
       } else {
-        const raw = article.content || article['content:encoded'] || '';
-        contentCol.innerHTML = actionsHtml + `
-        <div class="content-body">
-          <div class="content-body-inner" id="contentBodyInner">
-            ${sanitizeHtml(raw)}
-          </div>
-        </div>
-        `;
-        // Enable selection highlight popover in content mode
-        setupHighlightPopover(document.getElementById('contentBodyInner'));
+        col.innerHTML = actionsHtml + `<iframe class="content-iframe" src="${article.link}"></iframe>`;
       }
     }
 
-    function iframeError(iframe) {
-      iframe.style.display = 'none';
-      iframe.parentElement.innerHTML += `
-        <div class="empty-state">
-          <h3>Cannot embed this page</h3>
-          <p>This website does not allow iframe embedding. Please open in new tab.</p>
-        </div>
-      `;
+    // --- Notes Logic ---
+    let notesOffset = 0, notesLimit = 30, notesFinished = false;
+
+    function switchToNotesView() {
+      document.body.classList.add('body-view-notes');
+      document.getElementById('navReader').classList.remove('active');
+      document.getElementById('navNotes').classList.add('active');
+      refreshNotes(); // Always refresh to show latest activity
     }
 
-    function copyLink(url) {
-      navigator.clipboard.writeText(url).then(() => {
-        showToast('Link copied to clipboard', '🔗');
-      });
+    function switchToReaderView() {
+      document.body.classList.remove('body-view-notes');
+      document.getElementById('navReader').classList.add('active');
+      document.getElementById('navNotes').classList.remove('active');
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    async function refreshNotes() {
+      notesOffset = 0; notesFinished = false;
+      document.getElementById('notesWaterfall').innerHTML = '';
+      await loadMoreNotes();
     }
 
-    // Prevent XSS from RSS content.
-    // Note: for safety, we DO NOT allow scripts/events/iframes inside content mode.
-    function sanitizeHtml(html) {
-      if (!html) return '';
-      if (window.DOMPurify) {
-        return window.DOMPurify.sanitize(html, {
-          USE_PROFILES: { html: true },
-          FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'],
-          FORBID_ATTR: ['onerror', 'onload', 'onclick', 'style']
-        });
-      }
-      // Fallback: escape as plain text
-      return escapeHtml(String(html));
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return 'Unknown';
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diff = now - date;
-
-      if (diff < 60000) return 'Just now';
-      if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-      if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
-
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    function getFeedUrlByName(feedName) {
-      const f = feeds.find(x => x.name === feedName);
-      return f ? f.url : null;
-    }
-
-    async function apiPost(url, body) {
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status} `);
-      return data;
-    }
-
-    function currentArticleIdGuess() {
-      // Backend currently expects an articleId; if the article was indexed via /api/articles, it already exists.
-      // For materialize/state/note we primarily rely on materialize response's articleId.
-      return null;
-    }
-
-    function summarizeActivity(item) {
-      const p = item && item.payload ? item.payload : {};
-      if (item.type === 'state') {
-        if (p.isFavorite) return 'Favorited article';
-        if (p.isRead) return 'Marked as read';
-        return 'Updated state';
-      }
-      if (item.type === 'note') return 'Saved a note';
-      if (item.type === 'materialize') return 'Saved to Markdown';
-      return 'Updated';
-    }
-
-    function formatTimeShort(iso) {
-      if (!iso) return '';
+    async function loadMoreNotes() {
+      if (notesFinished) return;
+      document.getElementById('notesLoading').style.display = 'block';
       try {
-        return new Date(iso).toLocaleString(undefined, { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-      } catch {
-        return iso;
-      }
-    }
-
-    async function refreshActivityPanel() {
-      const list = document.getElementById('activityPanelList');
-      if (!list) return;
-      try {
-        const data = await fetch('/api/activity?limit=20&offset=0').then(r => r.json());
+        const res = await fetch(`/api/activity?limit=${notesLimit}&offset=${notesOffset}`);
+        const data = await res.json();
         const items = data.items || [];
-        if (!items.length) {
-          list.innerHTML = '<li class="activity-panel-item">No activity yet.</li>';
-          return;
-        }
-        list.innerHTML = items.map(item => {
-          const title = escapeHtml((item.article && item.article.title) || (item.payload && item.payload.title) || '(untitled)');
-          return `<li class="activity-panel-item">
-            <div class="activity-type">${escapeHtml(item.type || 'activity')}</div>
-            <div>${escapeHtml(summarizeActivity(item))} · ${title}</div>
-            <div class="activity-time">${escapeHtml(formatTimeShort(item.createdAt || ''))}</div>
-          </li>`;
-        }).join('');
-      } catch (err) {
-        list.innerHTML = `<li class="activity-panel-item">Failed to load activity: ${escapeHtml(err.message || 'unknown error')}</li>`;
+        const wf = document.getElementById('notesWaterfall');
+        
+        items.forEach(it => {
+          const p = it.payload || {};
+          
+          // --- Filter Noise ---
+          // 1. Skip system materialize logs
+          if (it.type === 'materialize') return;
+          // 2. Skip state changes that are NOT favorites (just marked read)
+          if (it.type === 'state' && !p.isFavorite) return;
+          
+          const isHighlight = it.type === 'note' && p.title === 'Highlight';
+          const isNote = it.type === 'note' && p.title !== 'Highlight';
+          const isFav = it.type === 'state' && p.isFavorite;
+
+          const displayType = isHighlight ? 'Highlight' : (isFav ? 'Favorite' : 'Note');
+          const title = it.article?.title || p.title || 'Untitled';
+          const link = it.article?.link || p.url || '';
+          const time = new Date(it.createdAt).toLocaleString();
+          const desc = summarizeActivity(it);
+          
+          const card = document.createElement('div');
+          card.className = 'note-card';
+          
+          card.innerHTML = `
+            <div class="meta"><span class="type">${displayType}</span><span>${new Date(it.createdAt).toLocaleDateString()}</span></div>
+            <div class="title">${title}</div>
+            <div class="desc">${desc}</div>
+            <div class="actions">
+              <button class="action-btn btn-reader" style="font-size:0.7rem">Reader</button>
+              ${link ? `<a class="action-btn" style="font-size:0.7rem; text-decoration:none;" href="${link}" target="_blank">Source</a>` : ''}
+              <button class="action-btn btn-copy" style="font-size:0.7rem">Copy MD</button>
+            </div>
+          `;
+          
+          card.querySelector('.btn-reader').onclick = () => openInReader(link);
+          card.querySelector('.btn-copy').onclick = () => copyNoteMD(title, link, time, desc);
+          
+          wf.appendChild(card);
+        });
+        
+        notesOffset += items.length;
+        if (items.length < notesLimit) notesFinished = true;
+        document.getElementById('notesLoading').style.display = notesFinished ? 'none' : 'block';
+        document.getElementById('notesMoreBtn').style.display = notesFinished ? 'none' : 'block';
+      } catch (e) {}
+    }
+
+    function copyNoteMD(title, link, time, desc) {
+      const md = `### ${title}\n- Time: ${time}\n${link ? `- Link: ${link}\n` : ''}\n${desc}`;
+      navigator.clipboard.writeText(md).then(() => showToast('Copied MD'));
+    }
+
+    function openInReader(link) {
+      if (!link) return;
+      switchToReaderView();
+      location.hash = 'open=' + encodeURIComponent(link);
+    }
+
+    // --- Utilities ---
+    async function apiPost(url, body) {
+      return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+    }
+
+    function sanitizeHtml(html) {
+      return DOMPurify.sanitize(html, { FORBID_TAGS: ['script', 'iframe'], FORBID_ATTR: ['onerror', 'onclick'] });
+    }
+
+    function summarizeActivity(it) {
+      const p = it.payload || {};
+      if (it.type === 'state') {
+        return p.isFavorite ? 'Added to favorites' : '';
       }
-    }
-
-    async function toggleActivityPanel(force) {
-      const panel = document.getElementById('activityPanel');
-      if (!panel) return;
-      const shouldOpen = typeof force === 'boolean' ? force : !isActivityPanelOpen;
-      if (shouldOpen) {
-        panel.classList.add('show');
-        isActivityPanelOpen = true;
-        await refreshActivityPanel();
-      } else {
-        panel.classList.remove('show');
-        isActivityPanelOpen = false;
+      if (it.type === 'note') {
+        return p.content || p.title || 'Note saved';
       }
+      return '';
     }
 
 
-    let isNoteEditorOpen = false;
+    function openNoteEditor() { document.getElementById('noteEditor').classList.add('active'); }
+    function closeNoteEditor() { document.getElementById('noteEditor').classList.remove('active'); document.getElementById('noteTextarea').value = ''; }
 
-    function openNoteEditor() {
-      const editor = document.getElementById('noteEditor');
-      if (!editor) return;
-      editor.classList.add('active');
-      document.getElementById('noteTextarea').focus();
-      isNoteEditorOpen = true;
-    }
-
-    function closeNoteEditor() {
-      const editor = document.getElementById('noteEditor');
-      if (editor) editor.classList.remove('active');
-      const textarea = document.getElementById('noteTextarea');
-      if (textarea) textarea.value = '';
-      isNoteEditorOpen = false;
-    }
-
-    async function saveNoteFromEditor() {
-      const textarea = document.getElementById('noteTextarea');
-      const content = textarea.value.trim();
-      if (!content) {
-        showToast('Content cannot be empty', '⚠️');
-        return;
-      }
-
+    async function saveNote() {
       if (!currentArticle) return;
-
-      const btn = document.getElementById('saveNoteBtn');
-      const originalText = btn.textContent;
-      btn.textContent = 'Saving...';
-      btn.disabled = true;
-
+      const content = document.getElementById('noteTextarea').value;
       try {
-        const r = await saveFullToMarkdown({ silent: true });
-        if (!r || !r.articleId) throw new Error('Failed to materialize article');
-
-        await apiPost('/api/article/state', { articleId: r.articleId, isRead: true });
-        await apiPost('/api/article/note', { articleId: r.articleId, title: 'Note', content });
-
-        showToast('Note saved', '📝');
+        const mat = await apiPost('/api/article/materialize', { url: currentArticle.link, title: currentArticle.title });
+        await apiPost('/api/article/note', { articleId: mat.articleId, title: 'Note', content });
+        showToast('Note saved');
         closeNoteEditor();
-        await refreshActivityPanel();
-      } catch (err) {
-        showToast('Save failed: ' + err.message, '❌');
-      } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
-      }
+        notesOffset = 0; // Trigger refresh next time Notes view is opened
+      } catch (e) { showToast('Error saving note'); }
     }
 
     async function toggleFavoriteCurrent() {
       if (!currentArticle) return;
-      const r = await saveFullToMarkdown({ silent: true });
-      if (r && r.articleId) {
-        // Favoriting also implies reading/processing
-        await apiPost('/api/article/state', { articleId: r.articleId, isFavorite: true, isRead: true });
-        showToast('Added to favorites and archived', '⭐');
-        await refreshActivityPanel();
-      }
+      const mat = await apiPost('/api/article/materialize', { url: currentArticle.link, title: currentArticle.title });
+      await apiPost('/api/article/state', { articleId: mat.articleId, isFavorite: true });
+      showToast('Favorited');
     }
 
-    async function createNoteForCurrent() {
-      if (!currentArticle) return;
-      openNoteEditor();
+    function toggleActivityPanel(force) {
+      const p = document.getElementById('activityPanel');
+      const show = typeof force === 'boolean' ? force : p.style.display !== 'flex';
+      p.style.display = show ? 'flex' : 'none';
+      if (show) refreshActivityLog();
     }
 
-    async function saveFullToMarkdown(opts = {}) {
-      if (!currentArticle) return null;
-      const link = currentArticle.link;
-      if (!link) return null;
-      const feedUrl = getFeedUrlByName(currentArticle.feedName) || getFeedUrlByName(currentArticle.feedTitle) || null;
-      try {
-        const out = await apiPost('/api/article/materialize', {
-          url: link,
-          feedUrl,
-          title: currentArticle.title,
-          publishedAt: currentArticle.pubDate
-        });
-        if (!opts.silent) showToast('Saved to Markdown', '💾');
-        return out;
-      } catch (e) {
-        if (!opts.silent) showToast('Save failed: ' + e.message, '❌');
-        throw e;
-      }
+    async function refreshActivityLog() {
+      const res = await fetch('/api/activity?limit=20').then(r => r.json());
+      const list = document.getElementById('activityPanelList');
+      list.innerHTML = '';
+      (res.items || []).forEach(it => {
+        const title = it.article?.title || it.payload?.title || 'Activity';
+        const desc = summarizeActivity(it);
+        const li = document.createElement('li');
+        li.className = 'activity-panel-item';
+        li.innerHTML = `<b>${it.type.toUpperCase()}</b>: ${title}<br/><small style="color:var(--text-muted)"></small>`;
+        li.querySelector('small').textContent = desc;
+        list.appendChild(li);
+      });
     }
 
-    async function clipSelectionToNote() {
-      if (!currentArticle) return;
-      const sel = window.getSelection ? window.getSelection().toString() : '';
-      if (!sel || sel.trim().length < 3) {
-        showToast('Select some text first', '✍️');
-        return;
-      }
-      const r = await saveFullToMarkdown({ silent: true });
-      if (!r || !r.articleId) return;
-      const quote = sel.trim().split('\n').map(l => '> ' + l).join('\n');
-      const content = `${quote} \n\n— ${currentArticle.link} \n`;
-      await apiPost('/api/article/note', { articleId: r.articleId, title: 'Highlight', content });
-      // Hide popover and clear selection
-      const hb = document.getElementById('highlightBtn');
-      if (hb) hb.style.display = 'none';
-      if (window.getSelection) window.getSelection().removeAllRanges();
-      showToast('Highlight saved', '📎');
-      await refreshActivityPanel();
-    }
-
-    function setupHighlightPopover(containerEl) {
+    function setupHighlightPopover(container) {
       const btn = document.getElementById('highlightBtn');
-      if (!btn || !containerEl) return;
-
-      const hide = () => {
-        btn.style.display = 'none';
-      };
-
-      const showAt = (x, y) => {
-        btn.style.left = Math.min(x + 10, window.innerWidth - 120) + 'px';
-        btn.style.top = Math.max(y - 34, 10) + 'px';
-        btn.style.display = 'inline-block';
-      };
-
-      containerEl.addEventListener('mouseup', (e) => {
-        const sel = window.getSelection ? window.getSelection().toString() : '';
-        if (sel && sel.trim().length >= 3) {
-          showAt(e.clientX, e.clientY);
-        } else {
-          hide();
-        }
-      });
-
-      containerEl.addEventListener('keyup', () => {
-        const sel = window.getSelection ? window.getSelection().toString() : '';
-        if (!(sel && sel.trim().length >= 3)) hide();
-      });
-
-      document.addEventListener('scroll', hide, { passive: true });
-      document.addEventListener('click', (e) => {
-        if (e.target === btn) return;
-        const sel = window.getSelection ? window.getSelection().toString() : '';
-        if (!(sel && sel.trim().length >= 3)) hide();
+      container.addEventListener('mouseup', (e) => {
+        const s = window.getSelection().toString();
+        if (s && s.trim().length > 3) {
+          btn.style.left = e.clientX + 'px'; btn.style.top = (e.clientY - 40) + 'px'; btn.style.display = 'block';
+        } else btn.style.display = 'none';
       });
     }
 
-    // Notes -> Reader deep link support
-    // Unified hash-based router for deep linking
-    async function openFromHash() {
-      const h = location.hash || '';
-      if (!h.startsWith('#open=')) return;
-
-      const link = decodeURIComponent(h.slice('#open='.length));
-      if (!link) return;
-
-      console.log('[Reader] Deep link open requested:', link);
-
-      try {
-        // Try current articles first
-        let found = currentArticles.find(a => a.link === link);
-
-        if (!found) {
-          // Try fetching recent ones
-          const list = await fetch('/api/articles?limit=250').then(r => r.json());
-          found = list.find(a => a.link === link);
-        }
-
-        if (found) {
-          currentArticles = [found];
-          currentArticle = found;
-          renderArticleList(currentArticles);
-          renderArticleContent(found);
-
-          // Switch view state so UI looks consistent
-          isDateFilterMode = false;
-          currentFeed = 'date'; // or some specific state
-          document.getElementById('currentDate').textContent = 'Opened link';
-          return;
-        }
-
-        // Fallback: iframe mode for unknown links
-        const fallback = {
-          title: link,
-          link,
-          pubDate: new Date().toISOString(),
-          feedName: 'External Link',
-          isRead: true
-        };
-        currentArticles = [fallback];
-        currentArticle = fallback;
-        renderArticleList(currentArticles);
-        renderArticleContent(fallback, 'iframe');
-        document.getElementById('currentDate').textContent = 'Direct Open';
-      } catch (err) {
-        console.error('[Reader] Hash open failed:', err);
-      }
+    async function clipHighlight() {
+      const s = window.getSelection().toString();
+      if (!currentArticle || !s) return;
+      const mat = await apiPost('/api/article/materialize', { url: currentArticle.link, title: currentArticle.title });
+      await apiPost('/api/article/note', { articleId: mat.articleId, title: 'Highlight', content: `> ${s}` });
+      showToast('Highlight saved');
+      document.getElementById('highlightBtn').style.display = 'none';
+      notesOffset = 0; // Trigger refresh next time Notes view is opened
     }
 
-    // Listen for hash changes to support navigation while index.html is already open
-    window.addEventListener('hashchange', openFromHash);
+    function setupHashRouter() {
+      const handle = async () => {
+        const h = location.hash;
+        if (h.startsWith('#open=')) {
+          const link = decodeURIComponent(h.split('=')[1]);
+          const res = await fetch('/api/articles?limit=100').then(r => r.json());
+          const found = res.find(a => a.link === link);
+          if (found) { currentArticles = [found]; renderArticleList([found]); selectArticle(0, document.querySelector('.article-item')); }
+        }
+      };
+      window.addEventListener('hashchange', handle);
+      handle();
+    }
 
-    const _init = init;
-    init = async function () {
-      await _init();
-      await openFromHash();
-    };
+    async function copyWeekly() {
+      const md = await fetch('/api/export/markdown?days=7').then(r => r.text());
+      navigator.clipboard.writeText(md).then(() => showToast('Copied Weekly'));
+    }
+
+    function exportWeekly() { window.open('/api/export/markdown?days=7', '_blank'); }
 
     init();
   </script>
