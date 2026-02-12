@@ -111,23 +111,62 @@ Open: `http://localhost:3000`
 ### 3) Optional: Use CLI
 
 ```bash
-# View recent articles
+# View recent articles (default)
 node cli.js
 
 # List all RSS feeds
 node cli.js list
 
-# Read article by index
+# Read articles from specific feed
 node cli.js read 1
+
+# Search articles by keyword
+node cli.js search "AI"
+
+# Show last N articles
+node cli.js recent 20
+
+# Knowledge Management
+node cli.js notes              # List all notes and highlights
+node cli.js highlights         # Alias for notes
+node cli.js favorites          # List all favorited articles
+node cli.js activity 30        # Show recent activity log
+
+# Actions
+node cli.js open 5             # Open article in browser
+node cli.js materialize 3      # Save article as Markdown
+node cli.js export 7           # Export last 7 days as Markdown
+
+# Statistics
+node cli.js stats              # Show database statistics
+node cli.js help               # Show help
 ```
+
+**CLI Features:**
+- Search articles by keyword in title or content
+- View notes, highlights, and favorites
+- Export knowledge to Markdown
+- Open articles in system browser
+- Materialize articles for offline reading
+- Database statistics and activity logs
 
 ## Development & Testing
 
 ```bash
-npm test
-# Integration tests only:
-node --test test/integration.test.js
+npm test                           # Run all tests
+node --test test/cli.test.js       # CLI tests only
+node --test test/rss.test.js       # RSS parser tests only
+node --test test/date-filter.test.js # Date filter tests only
+node --test test/integration.test.js # Integration tests only
 ```
+
+**Test Coverage:**
+- CLI command parsing and argument handling
+- Article search and filtering
+- Feed management operations
+- Activity log querying
+- Export functionality
+- Statistics calculation
 
 ## Tech Stack
 
