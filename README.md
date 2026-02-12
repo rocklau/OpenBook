@@ -161,12 +161,16 @@ node --test test/integration.test.js # Integration tests only
 ```
 
 **Test Coverage:**
-- CLI command parsing and argument handling
-- Article search and filtering
-- Feed management operations
-- Activity log querying
-- Export functionality
-- Statistics calculation
+- CLI function behavior with temporary SQLite fixtures
+- CLI argv dispatch (`node cli.js ...`) and command routing
+- Activity log querying via `payload_json` semantics
+- Notes/Favorites/Highlights statistics correctness
+- Search usage and error-path output validation
+
+**Testing Notes (CLI):**
+- `cli.js` exports command handlers for direct unit testing.
+- Entry execution is guarded by `require.main === module` to avoid side effects when imported.
+- Command-level tests run in isolated temp directories and use lightweight OPML fixtures to avoid flaky network/DNS dependencies.
 
 ## Tech Stack
 

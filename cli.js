@@ -1,4 +1,4 @@
-const RSSReader = require('./rss');
+const { RSSReader } = require('./rss');
 const fs = require('fs');
 const path = require('path');
 
@@ -199,7 +199,7 @@ async function listNotes() {
   console.log(`📝 ${notes.length} Notes & Highlights\n`);
 
   notes.forEach((note, index) => {
-    const payload = JSON.parse(note.payload || '{}');
+    const payload = JSON.parse(note.payload_json || '{}');
     const date = new Date(note.created_at).toLocaleDateString('en-US');
 
     console.log(`${'─'.repeat(80)}`);
@@ -233,7 +233,7 @@ async function listFavorites() {
     SELECT al.*, a.title as article_title, a.link as article_link
     FROM activity_log al
     LEFT JOIN articles a ON al.article_id = a.id
-    WHERE al.type = 'state' AND json_extract(al.payload, '$.isFavorite') = 1
+    WHERE al.type = 'state' AND json_extract(al.payload_json, '$.isFavorite') = 1
     ORDER BY al.created_at DESC
     LIMIT 50
   `).all();
@@ -275,10 +275,10 @@ async function showStats() {
 
     const articlesCount = db.prepare('SELECT COUNT(*) as count FROM articles').get();
     const notesCount = db.prepare("SELECT COUNT(*) as count FROM activity_log WHERE type = 'note'").get();
-    const favoritesCount = db.prepare("SELECT COUNT(*) as count FROM activity_log WHERE type = 'state' AND json_extract(payload, '$.isFavorite') = 1").get();
+    const favoritesCount = db.prepare("SELECT COUNT(*) as count FROM activity_log WHERE type = 'state' AND json_extract(payload_json, '$.isFavorite') = 1").get();
     const highlightsCount = db.prepare(`
       SELECT COUNT(*) as count FROM activity_log
-      WHERE type = 'note' AND json_extract(payload, '$.title') = 'Highlight'
+      WHERE type = 'note' AND json_extract(payload_json, '$.title') = 'Highlight'
     `).get();
 
     db.close();
@@ -426,7 +426,7 @@ async function showActivity(limit) {
   console.log(`📋 Last ${activities.length} Activities\n`);
 
   activities.forEach((activity, index) => {
-    const payload = JSON.parse(activity.payload || '{}');
+    const payload = JSON.parse(activity.payload_json || '{}');
     const date = new Date(activity.created_at).toLocaleString('en-US');
     const type = activity.type.toUpperCase();
 
@@ -486,4 +486,24 @@ Examples:
 `);
 }
 
-main().catch(console.error);
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+module.exports = {
+  main,
+  searchArticles,
+  listNotes,
+  listFavorites,
+  showStats,
+  showRecent,
+  showActivity,
+  showHelp,
+  displayArticles,
+  materializeArticle,
+  openArticle,
+  exportData,
+  readAll,
+  readFeed,
+  listFeeds
+};

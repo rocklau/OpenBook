@@ -16,9 +16,21 @@ Open the app at `http://localhost:3000`.
 
 ```bash
 npm test
-# Integration tests only:
-node --test test/integration.test.js
+node --test test/cli.test.js          # CLI tests (function + argv dispatch)
+node --test test/rss.test.js          # RSS parser tests
+node --test test/date-filter.test.js  # Date filter tests
+node --test test/integration.test.js  # Integration tests
 ```
+
+### CLI testing conventions (important)
+
+When changing `cli.js`, keep tests aligned with real behavior:
+
+- Prefer **real handler tests** over mock self-validation.
+- Use temp SQLite fixtures and assert query behavior against `activity_log.payload_json`.
+- Add at least one **argv dispatch test** (`spawnSync('node', ['cli.js', ...])`) for new commands.
+- Validate both success and failure paths (missing DB, invalid args, empty query, etc.).
+- Keep tests deterministic: isolated temp cwd and local fixture files.
 
 ## Branch, Commit, PR Workflow
 
