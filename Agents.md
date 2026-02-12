@@ -1,45 +1,79 @@
-# Integrated Notes & Reader: Project Summary & Lessons Learned
+# OpenBook Knowledge Base
 
-## Project Overview
-The goal of this phase was to unify the "Reader" and "Notes" (Activity Waterfall) interfaces into a single, cohesive experience within `public/index.html`. This involved moving away from a multi-page architecture to a state-driven single-page layout that maintains high aesthetic standards across desktop and mobile devices.
+**Generated:** 2026-02-12  
+**Stack:** Node.js, Express, SQLite, Vanilla JS  
+**Type:** Indie RSS reader + knowledge collector
 
-## Core Accomplishments
-- **Unified Interface**: Integrated the notes waterfall into the main reader layout, utilizing a 3-column grid (`240px 360px 1fr`) where the Notes view intelligently spans columns 2 and 3.
-- **Mobile First Adaptation**: Implemented a "Stacked View" architecture for mobile devices (<768px), featuring a custom minimalist bottom navigation and a state-driven view manager.
-- **Enhanced Content Capture**: Refactored the backend and frontend to ensure highlight and note content is captured, stored in `activity_log`, and rendered beautifully in cards.
-- **UX Polishing**:
-  - Implemented **Infinite Scroll** for notes.
-  - Refined **Highlight Popover** using selection bounding box positioning for 100% accuracy.
-  - Applied a **Paper-like Aesthetic** with curated typography (Georgia/Serif) and warm color palettes.
+## OVERVIEW
+OpenBook is a local-first RSS reader with unified Reader/Notes UI. It materializes articles as Markdown, captures highlights/notes, and exports knowledge for Obsidian/LLM workflows.
 
-## Technical Architecture
-- **State-Driven UI**: Used `document.body` class names (`body-view-notes`, `body-has-selection`) as the primary "State Machine" to control complex CSS transitions and visibility.
-- **Responsive Shell**: Decoupled Desktop Grid from Mobile Fixed-Positioning to prevent layout contamination.
-- **Backend Data Flow**: Enriched the `activity_log` payload to store snapshots of content, avoiding heavy database joins and ensuring fast waterfall rendering.
+## STRUCTURE
+```
+./
+├── server.js          # Express API + static serving
+├── cli.js             # CLI interface (list, read, search, export)
+├── rss.js             # RSS parsing + OPML import
+├── storage.js         # SQLite schema + JSON index helpers
+├── activity.js        # Activity type constants
+├── collector.js       # Asset download for favorited articles
+├── html_to_md.js      # HTML→Markdown conversion (Turndown)
+├── public/
+│   └── index.html     # Single-page UI (state-driven)
+├── test/              # Node.js native test runner
+└── data/              # SQLite, Markdown articles, notes
+```
 
-## Lessons Learned & Best Practices
+## WHERE TO LOOK
+| Task | Location | Notes |
+|------|----------|-------|
+| Add API endpoint | `server.js` | Express routes, SQLite prepared statements |
+| Modify CLI command | `cli.js` | Command dispatch in `main()` switch |
+| Change RSS parsing | `rss.js` | `RSSReader` class, feed caching |
+| Update DB schema | `storage.js` | `migrate()` function |
+| Frontend UI changes | `public/index.html` | CSS vars + vanilla JS, no build step |
+| Add test | `test/*.test.js` | Node native test runner |
 
-### 1. CSS Grid vs. Mobile Layers
-**Lesson**: Mixing `grid-column` spanning for desktop with `absolute/fixed` positioning for mobile often leads to "layout leakage" where elements vanish or overlap unexpectedly.
-**Solution**: Always explicitly reset Grid properties (e.g., `grid-column: auto !important`) in mobile media queries when switching to a non-grid layout.
+## CODE MAP
+| Symbol | Type | Location | Role |
+|--------|------|----------|------|
+| `RSSReader` | Class | `rss.js` | Feed parsing, caching |
+| `openDb()` | Function | `storage.js` | SQLite connection |
+| `processArticles()` | Function | `server.js:70` | DB upsert + state attach |
+| `stmtLogActivity` | Prepared | `server.js:56` | Activity feed writes |
+| `ACTIVITY_TYPES` | Constants | `activity.js` | 'state', 'note', 'materialize' |
 
-### 2. Selection-Based Positioning
-**Lesson**: Positioning UI elements (like a "Highlight" button) based on `mouseup` coordinates is unreliable due to scroll offsets and selection direction.
-**Solution**: Use `window.getSelection().getRangeAt(0).getBoundingClientRect()` combined with `window.scrollY`. This provides the exact coordinates of the selected text block regardless of mouse movement.
+## CONVENTIONS
+- **IDs:** Stable hash `md5(feed_url + guid\|link)` via `utils.stableId()`
+- **File naming:** `safeFileName()` → lowercase, alphanumeric + hyphen
+- **Dates:** ISO 8601 strings, SQLite `datetime('now')`
+- **Async:** Prefer `better-sqlite3` synchronous API; `async/await` for I/O
+- **No build step:** Frontend is vanilla JS in single HTML file
+- **No linting config:** No ESLint/Prettier configs present
 
-### 3. State Exclusivity on Mobile
-**Lesson**: On small screens, having multiple `display: flex` layers can cause invisible elements to block touch events or create "ghost" scrolling.
-**Solution**: Implement strict mutual exclusivity in CSS. If `State A` is active, `State B` and `State C` must be `display: none !important`. Use `body` classes to orchestrate this centrally.
+## ANTI-PATTERNS
+- **NEVER use `AS any` or `@ts-ignore`:** Not applicable (plain JS)
+- **DON'T break mobile state exclusivity:** CSS classes must be mutually exclusive
+- **NEVER trust selection coordinates alone:** Always use `getBoundingClientRect() + scrollY`
+- **DON'T query activity_log with joins in hot paths:** Payload stored denormalized
 
-### 4. Minimalist Navigation
-**Lesson**: Icons can often clutter a "scholarly" or "indie" aesthetic.
-**Solution**: Pure text navigation with high-quality typography (uppercase, letter-spacing) and subtle active indicators (like a thin underline) can provide a more premium, focused user experience than generic Emojis.
+## UNIQUE PATTERNS
+- **State-driven layout:** `document.body.className` controls view state (not React/Vue)
+- **Paper aesthetic:** Warm palette (`#f8f5f0`), Georgia serif, soft shadows
+- **Dual storage:** SQLite for queries + JSON index for grep-friendly access
+- **Activity log:** Append-only audit trail for all user actions
 
-### 5. Content Truncation for Waterfall Layouts
-**Lesson**: Large notes can break the visual rhythm of a waterfall layout, especially on mobile, leading to infinite scrolling for a single card.
-**Solution**: Implement smart truncation in the rendering logic (e.g., max 200 chars for mobile) to keep cards compact and the interface scannable.
+## COMMANDS
+```bash
+npm start              # Web server @ localhost:3000
+npm test               # Run all tests (Node native runner)
+node cli.js            # Default: show recent articles
+node cli.js search "AI" # Search by keyword
+node cli.js export 7   # Export last 7 days as Markdown
+```
 
-## Future Recommendations
-- **Search Integration**: Implement a unified search that filters both feeds and notes simultaneously.
-- **Keyboard Shortcuts**: Add 'N' for Notes, 'R' for Reader, and 'ESC' to close articles to enhance the "Power User" experience.
-- **Image Support**: Extend the activity cards to support image snapshots captured during highlights.
+## NOTES
+- **Mobile breakpoint:** 768px switches from grid to stacked views
+- **Grid reset:** Mobile uses `!important` to override desktop grid-column spans
+- **WAL mode:** SQLite runs with `journal_mode = WAL` for concurrency
+- **No migrations table:** Schema version not tracked; manual migration only
+- **OPML loading:** All `.opml` files in root loaded at startup
