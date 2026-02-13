@@ -29,6 +29,7 @@ function createArticleService(deps) {
     finishedAt: null,
     lastCount: 0,
     lastError: null,
+    lastSummary: null,
     inFlight: null
   };
 
@@ -53,8 +54,8 @@ function createArticleService(deps) {
     };
   }
 
-  async function listArticlesImpl(limit = 50) {
-    const articles = await reader.getAllArticles(limit);
+  async function listArticlesImpl(limit = 50, options = {}) {
+    const articles = await reader.getAllArticles(limit, options);
 
     const index = readJsonIndex();
     const feedSet = new Map(index.feeds.map(f => [f.url, f]));
@@ -79,7 +80,7 @@ function createArticleService(deps) {
     return articles;
   }
 
-  async function warmSync({ limit = 50, timeoutMs = 8000, reason = 'manual' } = {}) {
+  async function warmSync({ limit = 50, timeoutMs = 8000, reason = 'manual', verbose = false } = {}) {
     if (syncState.inFlight) return syncState.inFlight;
 
     syncState.status = 'running';
@@ -139,27 +140,31 @@ function createArticleService(deps) {
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('warm_sync_timeout')), timeoutMs);
           });
-          articles = await Promise.race([listArticlesImpl(limit), timeoutPromise]);
+          articles = await Promise.race([listArticlesImpl(limit, { verbose }), timeoutPromise]);
         } else {
-          articles = await listArticlesImpl(limit);
+          articles = await listArticlesImpl(limit, { verbose });
         }
 
         const afterCount = countArticles();
         const summary = summarizeSync(syncState.startedAt, beforeCount, afterCount);
+        const fetchStats = reader.lastFetchStats || null;
 
         syncState.status = 'success';
         syncState.lastCount = Array.isArray(articles) ? articles.length : 0;
+        syncState.lastSummary = summary;
         return {
           ok: true,
           status: syncState.status,
           reason,
           count: syncState.lastCount,
           startedAt: syncState.startedAt,
-          summary
+          summary,
+          fetchStats
         };
       } catch (error) {
         syncState.status = error?.message === 'warm_sync_timeout' ? 'timeout' : 'error';
         syncState.lastError = error?.message || String(error);
+        syncState.lastSummary = null;
         return {
           ok: false,
           status: syncState.status,
@@ -185,6 +190,7 @@ function createArticleService(deps) {
       finishedAt: syncState.finishedAt,
       lastCount: syncState.lastCount,
       lastError: syncState.lastError,
+      lastSummary: syncState.lastSummary,
       inFlight: !!syncState.inFlight
     };
   }

@@ -55,7 +55,8 @@ function registerArticleRoutes(app, deps) {
     try {
       const limit = toInt(req.body?.limit, 50);
       const timeoutMs = toInt(req.body?.timeoutMs, 8000);
-      res.json(await articleService.warmSync({ limit, timeoutMs, reason: 'manual' }));
+      const verbose = req.body?.verbose === true || String(req.body?.verbose).toLowerCase() === 'true';
+      res.json(await articleService.warmSync({ limit, timeoutMs, reason: 'manual', verbose }));
     } catch (e) {
       internalError(res, e);
     }

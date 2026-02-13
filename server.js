@@ -17,8 +17,9 @@ async function startServer(port = PORT) {
       if (shouldWarmSync) {
         const warmLimit = Number(process.env.OPENBOOK_STARTUP_SYNC_LIMIT || 50);
         const warmTimeoutMs = Number(process.env.OPENBOOK_STARTUP_SYNC_TIMEOUT_MS || 8000);
+        const warmVerbose = String(process.env.OPENBOOK_SYNC_VERBOSE || 'false').toLowerCase() === 'true';
 
-        startWarmSync({ limit: warmLimit, timeoutMs: warmTimeoutMs, reason: 'startup' })
+        startWarmSync({ limit: warmLimit, timeoutMs: warmTimeoutMs, reason: 'startup', verbose: warmVerbose })
           .then((result) => {
             const tag = result?.ok ? 'completed' : 'finished-with-issues';
             console.log(`[StartupSync] ${tag}:`, result);
