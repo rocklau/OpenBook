@@ -117,6 +117,23 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_activity_log_time ON activity_log(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activity_log_article ON activity_log(article_id);
   `);
+
+  const guardedUniqueIndexes = [
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_feed_guid_unique
+      ON articles(feed_url, guid)
+      WHERE guid IS NOT NULL AND guid != ''`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_feed_link_unguided_unique
+      ON articles(feed_url, link)
+      WHERE link IS NOT NULL AND link != '' AND (guid IS NULL OR guid = '')`
+  ];
+
+  for (const sql of guardedUniqueIndexes) {
+    try {
+      db.exec(sql);
+    } catch (err) {
+      console.warn('[migrate] skipped unique index due to existing duplicates:', err.message);
+    }
+  }
 }
 
 function readJsonIndex() {

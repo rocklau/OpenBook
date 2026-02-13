@@ -70,6 +70,7 @@ class RSSReader {
     this.feeds = [];
     this.cache = new Map();
     this.cacheExpiry = 5 * 60 * 1000;
+    this.feedInFlight = new Map();
 
     // Storage
     this.db = openDb();
@@ -181,82 +182,95 @@ class RSSReader {
   }
 
   async parseFeed(url, options = {}) {
-    try {
-      const { force = false } = options;
+    const normalizedUrl = new URL(url).toString();
+    const inFlight = this.feedInFlight.get(normalizedUrl);
+    if (inFlight) return inFlight;
 
-      // in-memory short cache for UI bursts
-      const cachedMem = this.cache.get(url);
-      if (!force && cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) return cachedMem.data;
+    const run = (async () => {
+      try {
+        const { force = false } = options;
 
-      const minSyncIntervalMs = Number(process.env.OPENBOOK_FEED_MIN_SYNC_INTERVAL_MS || 120000);
-      const syncState = this.stmtGetSyncState.get(url);
-      if (!force && syncState?.last_checked_at) {
-        const ageMs = Date.now() - new Date(syncState.last_checked_at + 'Z').getTime();
-        if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < minSyncIntervalMs) {
-          const cachedBody = this.getCachedBody(url);
-          if (cachedBody) {
-            const xml = cachedBody.toString('utf-8');
-            const feed = await parser.parseString(xml);
-            const result = {
-              title: feed.title || 'Untitled Feed',
-              description: feed.description,
-              link: feed.link,
-              items: (feed.items || []).map(item => ({
-                title: item.title || 'Untitled',
-                link: item.link,
-                guid: item.guid,
-                pubDate: item.pubDate || item.isoDate,
-                content: item['content:encoded'] || item.content,
-                contentSnippet: item.contentSnippet,
-                author: item.author || item.creator,
-                feedUrl: url
-              }))
-            };
-            this.cache.set(url, { data: result, timestamp: Date.now() });
-            this.logFeedSync(url, { status: syncState.last_status || 200, fromCache: true, reason: 'min_interval_skip' });
-            return result;
+        // in-memory short cache for UI bursts
+        const cachedMem = this.cache.get(normalizedUrl);
+        if (!force && cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) return cachedMem.data;
+
+        const minSyncIntervalMs = Number(process.env.OPENBOOK_FEED_MIN_SYNC_INTERVAL_MS || 120000);
+        const syncState = this.stmtGetSyncState.get(normalizedUrl);
+        if (!force && syncState?.last_checked_at) {
+          const ageMs = Date.now() - new Date(syncState.last_checked_at + 'Z').getTime();
+          if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < minSyncIntervalMs) {
+            const cachedBody = this.getCachedBody(normalizedUrl);
+            if (cachedBody) {
+              const xml = cachedBody.toString('utf-8');
+              const feed = await parser.parseString(xml);
+              const result = {
+                title: feed.title || 'Untitled Feed',
+                description: feed.description,
+                link: feed.link,
+                items: (feed.items || []).map(item => ({
+                  title: item.title || 'Untitled',
+                  link: item.link,
+                  guid: item.guid,
+                  pubDate: item.pubDate || item.isoDate,
+                  content: item['content:encoded'] || item.content,
+                  contentSnippet: item.contentSnippet,
+                  author: item.author || item.creator,
+                  feedUrl: normalizedUrl
+                }))
+              };
+              this.cache.set(normalizedUrl, { data: result, timestamp: Date.now() });
+              this.logFeedSync(normalizedUrl, { status: syncState.last_status || 200, fromCache: true, reason: 'min_interval_skip' });
+              return result;
+            }
           }
         }
+
+        const { body, status, fromCache } = await this.fetchWithCache(normalizedUrl, 'rss');
+        const xml = body.toString('utf-8');
+
+        // rss-parser can parseString to avoid duplicate network fetch
+        const feed = await parser.parseString(xml);
+
+        const result = {
+          title: feed.title || 'Untitled Feed',
+          description: feed.description,
+          link: feed.link,
+          items: (feed.items || []).map(item => ({
+            title: item.title || 'Untitled',
+            link: item.link,
+            guid: item.guid,
+            pubDate: item.pubDate || item.isoDate,
+            content: item['content:encoded'] || item.content,
+            contentSnippet: item.contentSnippet,
+            author: item.author || item.creator,
+            feedUrl: normalizedUrl
+          }))
+        };
+
+        this.cache.set(normalizedUrl, { data: result, timestamp: Date.now() });
+
+        const cachedMeta = this.stmtGetCache.get(normalizedUrl);
+        this.logFeedSync(normalizedUrl, {
+          status: status || 200,
+          fromCache: !!fromCache,
+          reason: fromCache ? 'cache_fallback' : 'network_fetch',
+          etag: cachedMeta?.etag || null,
+          lastModified: cachedMeta?.last_modified || null
+        });
+
+        return result;
+      } catch (error) {
+        this.logFeedSync(normalizedUrl, { status: error?.status || null, fromCache: false, reason: `error:${error.message}` });
+        console.error(`Error parsing ${normalizedUrl}:`, error.message);
+        return null;
       }
+    })();
 
-      const { body, status, fromCache } = await this.fetchWithCache(url, 'rss');
-      const xml = body.toString('utf-8');
-
-      // rss-parser can parseString to avoid duplicate network fetch
-      const feed = await parser.parseString(xml);
-
-      const result = {
-        title: feed.title || 'Untitled Feed',
-        description: feed.description,
-        link: feed.link,
-        items: (feed.items || []).map(item => ({
-          title: item.title || 'Untitled',
-          link: item.link,
-          guid: item.guid,
-          pubDate: item.pubDate || item.isoDate,
-          content: item['content:encoded'] || item.content,
-          contentSnippet: item.contentSnippet,
-          author: item.author || item.creator,
-          feedUrl: url
-        }))
-      };
-
-      this.cache.set(url, { data: result, timestamp: Date.now() });
-
-      const cachedMeta = this.stmtGetCache.get(new URL(url).toString());
-      this.logFeedSync(url, {
-        status: status || 200,
-        fromCache: !!fromCache,
-        reason: fromCache ? 'cache_fallback' : 'network_fetch',
-        etag: cachedMeta?.etag || null,
-        lastModified: cachedMeta?.last_modified || null
-      });
-
-      return result;
-    } catch (error) {
-      this.logFeedSync(url, { status: error?.status || null, fromCache: false, reason: `error:${error.message}` });
-      console.error(`Error parsing ${url}:`, error.message);
-      return null;
+    this.feedInFlight.set(normalizedUrl, run);
+    try {
+      return await run;
+    } finally {
+      this.feedInFlight.delete(normalizedUrl);
     }
   }
 
