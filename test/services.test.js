@@ -124,3 +124,51 @@ test('articleService.materializeArticle should skip when url already materialize
     require('node:fs').existsSync = existsSyncOriginal;
   }
 });
+
+test('articleService.warmSync should expose running and success status', async () => {
+  let resolveFetch;
+  const started = new Promise(resolve => {
+    resolveFetch = () => resolve([
+      {
+        feedName: 'Example',
+        title: 'A',
+        link: 'https://example.com/a',
+        guid: 'g1',
+        pubDate: '2026-01-01',
+        author: 'me'
+      }
+    ]);
+  });
+
+  const service = createArticleService({
+    reader: {
+      feeds: [{ url: 'https://example.com/rss', name: 'Example' }],
+      getAllArticles: async () => started
+    },
+    stableId: () => 'id-1',
+    safeFileName: (s) => s,
+    ensureDir: () => {},
+    ARTICLES_DIR: '/tmp/articles',
+    NOTES_DIR: '/tmp/notes',
+    queuedFetch: async () => ({ text: async () => '<html></html>' }),
+    htmlToMarkdown: () => 'md',
+    downloadResources: async () => {},
+    ACTIVITY_TYPES: { NOTE: 'note', STATE: 'state', MATERIALIZE: 'materialize' },
+    readJsonIndex: () => ({ feeds: [], articles: [] }),
+    writeJsonIndex: () => {},
+    repositories: {},
+    processArticles: () => {},
+    initFeeds: async () => {}
+  });
+
+  const syncPromise = service.warmSync({ limit: 20, timeoutMs: 3000, reason: 'startup' });
+  assert.strictEqual(service.getSyncStatus().status, 'running');
+
+  resolveFetch();
+  const result = await syncPromise;
+
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.status, 'success');
+  assert.strictEqual(service.getSyncStatus().status, 'success');
+  assert.strictEqual(service.getSyncStatus().lastCount, 1);
+});

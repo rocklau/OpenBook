@@ -22,6 +22,103 @@ function createArticleService(deps) {
 
   const materializeInFlight = new Map();
   const stateUpdateInFlight = new Map();
+  const syncState = deps.syncState || {
+    status: 'idle',
+    reason: null,
+    startedAt: null,
+    finishedAt: null,
+    lastCount: 0,
+    lastError: null,
+    inFlight: null
+  };
+
+  async function listArticlesImpl(limit = 50) {
+    const articles = await reader.getAllArticles(limit);
+
+    const index = readJsonIndex();
+    const feedSet = new Map(index.feeds.map(f => [f.url, f]));
+    reader.feeds.forEach(f => {
+      if (!feedSet.has(f.url)) feedSet.set(f.url, { url: f.url, name: f.name });
+    });
+
+    const compact = articles.map(a => ({
+      id: stableId(a.feedName || a.feedTitle || '', a.guid || a.link || a.title),
+      feed: a.feedName || a.feedTitle,
+      title: a.title,
+      link: a.link,
+      pubDate: a.pubDate,
+      author: a.author
+    }));
+
+    index.feeds = Array.from(feedSet.values());
+    index.articles = compact;
+    writeJsonIndex(index);
+
+    processArticles(articles);
+    return articles;
+  }
+
+  async function warmSync({ limit = 50, timeoutMs = 8000, reason = 'manual' } = {}) {
+    if (syncState.inFlight) return syncState.inFlight;
+
+    syncState.status = 'running';
+    syncState.reason = reason;
+    syncState.startedAt = new Date().toISOString();
+    syncState.finishedAt = null;
+    syncState.lastError = null;
+
+    const run = (async () => {
+      try {
+        let articles;
+        if (timeoutMs > 0) {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('warm_sync_timeout')), timeoutMs);
+          });
+          articles = await Promise.race([listArticlesImpl(limit), timeoutPromise]);
+        } else {
+          articles = await listArticlesImpl(limit);
+        }
+
+        syncState.status = 'success';
+        syncState.lastCount = Array.isArray(articles) ? articles.length : 0;
+        return {
+          ok: true,
+          status: syncState.status,
+          reason,
+          count: syncState.lastCount,
+          startedAt: syncState.startedAt
+        };
+      } catch (error) {
+        syncState.status = error?.message === 'warm_sync_timeout' ? 'timeout' : 'error';
+        syncState.lastError = error?.message || String(error);
+        return {
+          ok: false,
+          status: syncState.status,
+          reason,
+          error: syncState.lastError,
+          startedAt: syncState.startedAt
+        };
+      } finally {
+        syncState.finishedAt = new Date().toISOString();
+        syncState.inFlight = null;
+      }
+    })();
+
+    syncState.inFlight = run;
+    return run;
+  }
+
+  function getSyncStatus() {
+    return {
+      status: syncState.status,
+      reason: syncState.reason,
+      startedAt: syncState.startedAt,
+      finishedAt: syncState.finishedAt,
+      lastCount: syncState.lastCount,
+      lastError: syncState.lastError,
+      inFlight: !!syncState.inFlight
+    };
+  }
 
   return {
     listFeeds() {
@@ -29,29 +126,7 @@ function createArticleService(deps) {
     },
 
     async listArticles(limit = 50) {
-      const articles = await reader.getAllArticles(limit);
-
-      const index = readJsonIndex();
-      const feedSet = new Map(index.feeds.map(f => [f.url, f]));
-      reader.feeds.forEach(f => {
-        if (!feedSet.has(f.url)) feedSet.set(f.url, { url: f.url, name: f.name });
-      });
-
-      const compact = articles.map(a => ({
-        id: stableId(a.feedName || a.feedTitle || '', a.guid || a.link || a.title),
-        feed: a.feedName || a.feedTitle,
-        title: a.title,
-        link: a.link,
-        pubDate: a.pubDate,
-        author: a.author
-      }));
-
-      index.feeds = Array.from(feedSet.values());
-      index.articles = compact;
-      writeJsonIndex(index);
-
-      processArticles(articles);
-      return articles;
+      return listArticlesImpl(limit);
     },
 
     async listArticlesByDate(date) {
@@ -79,6 +154,9 @@ function createArticleService(deps) {
       await initFeeds();
       return { message: 'Feeds refreshed', count: reader.feeds.length };
     },
+
+    warmSync,
+    getSyncStatus,
 
     async materializeArticle({ url, feedUrl, title, publishedAt }) {
       const normalizedUrl = new URL(url).toString();

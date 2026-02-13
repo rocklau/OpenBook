@@ -47,6 +47,20 @@ function registerArticleRoutes(app, deps) {
     res.json(await articleService.refreshFeeds());
   });
 
+  app.get('/api/sync/status', (req, res) => {
+    res.json(articleService.getSyncStatus());
+  });
+
+  app.post('/api/sync/warm', async (req, res) => {
+    try {
+      const limit = toInt(req.body?.limit, 50);
+      const timeoutMs = toInt(req.body?.timeoutMs, 8000);
+      res.json(await articleService.warmSync({ limit, timeoutMs, reason: 'manual' }));
+    } catch (e) {
+      internalError(res, e);
+    }
+  });
+
   app.post('/api/article/materialize', async (req, res) => {
     try {
       const { url, feedUrl, title, publishedAt } = req.body || {};
