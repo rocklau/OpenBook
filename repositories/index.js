@@ -23,7 +23,12 @@ function createRepositories(featureDb) {
 
   const stmtGetState = featureDb.prepare('SELECT is_read, is_favorite, updated_at FROM article_state WHERE article_id=?');
   const stmtGetArticle = featureDb.prepare('SELECT * FROM articles WHERE id=?');
-  const stmtGetArticleByLink = featureDb.prepare('SELECT * FROM articles WHERE link=? ORDER BY updated_at DESC LIMIT 1');
+  const stmtGetArticleByLink = featureDb.prepare(`
+    SELECT * FROM articles
+    WHERE link=?
+    ORDER BY (markdown_path IS NOT NULL) DESC, updated_at DESC
+    LIMIT 1
+  `);
   const stmtInsertNote = featureDb.prepare('INSERT INTO article_notes(article_id, note_path) VALUES (?, ?)');
   const stmtListNotes = featureDb.prepare('SELECT id, note_path, created_at FROM article_notes WHERE article_id=? ORDER BY id DESC');
 

@@ -21,6 +21,7 @@ function createArticleService(deps) {
   } = deps;
 
   const materializeInFlight = new Map();
+  const stateUpdateInFlight = new Map();
 
   return {
     listFeeds() {
@@ -180,29 +181,55 @@ function createArticleService(deps) {
       }
     },
 
-    updateArticleState({ articleId, isRead, isFavorite }) {
-      const existing = repositories.getArticleState(articleId) || { is_read: 0, is_favorite: 0 };
-      const nextRead = typeof isRead === 'boolean' ? (isRead ? 1 : 0) : existing.is_read;
-      const nextFav = typeof isFavorite === 'boolean' ? (isFavorite ? 1 : 0) : existing.is_favorite;
+    async updateArticleState({ articleId, isRead, isFavorite }) {
+      const previous = stateUpdateInFlight.get(articleId) || Promise.resolve();
 
-      repositories.setArticleState(articleId, nextRead, nextFav);
+      const run = previous.then(async () => {
+        const existing = repositories.getArticleState(articleId) || { is_read: 0, is_favorite: 0 };
+        const nextRead = typeof isRead === 'boolean' ? (isRead ? 1 : 0) : existing.is_read;
+        const nextFav = typeof isFavorite === 'boolean' ? (isFavorite ? 1 : 0) : existing.is_favorite;
 
-      if (nextFav && !existing.is_favorite) {
-        const article = repositories.getArticleById(articleId);
-        if (article && article.markdown_path) {
-          downloadResources(article.markdown_path, articleId).catch(err => {
-            console.error(`[Server] Error downloading resources for ${articleId}:`, err);
-          });
+        if (nextRead === existing.is_read && nextFav === existing.is_favorite) {
+          return {
+            ok: true,
+            articleId,
+            isRead: !!nextRead,
+            isFavorite: !!nextFav,
+            skipped: true,
+            reason: 'state_unchanged'
+          };
+        }
+
+        repositories.setArticleState(articleId, nextRead, nextFav);
+
+        if (nextFav && !existing.is_favorite) {
+          const article = repositories.getArticleById(articleId);
+          if (article && article.markdown_path) {
+            downloadResources(article.markdown_path, articleId).catch(err => {
+              console.error(`[Server] Error downloading resources for ${articleId}:`, err);
+            });
+          }
+        }
+
+        repositories.logActivity(
+          ACTIVITY_TYPES.STATE,
+          articleId,
+          JSON.stringify({ isRead: !!nextRead, isFavorite: !!nextFav })
+        );
+
+        return { ok: true, articleId, isRead: !!nextRead, isFavorite: !!nextFav };
+      });
+
+      const tail = run.catch(() => {});
+      stateUpdateInFlight.set(articleId, tail);
+
+      try {
+        return await run;
+      } finally {
+        if (stateUpdateInFlight.get(articleId) === tail) {
+          stateUpdateInFlight.delete(articleId);
         }
       }
-
-      repositories.logActivity(
-        ACTIVITY_TYPES.STATE,
-        articleId,
-        JSON.stringify({ isRead: !!nextRead, isFavorite: !!nextFav })
-      );
-
-      return { ok: true, articleId, isRead: !!nextRead, isFavorite: !!nextFav };
     },
 
     createNote({ articleId, title, content }) {
