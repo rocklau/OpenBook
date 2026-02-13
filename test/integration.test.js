@@ -1,9 +1,23 @@
 const assert = require('node:assert');
 const test = require('node:test');
+const { startServer } = require('../server');
 
-const BASE_URL = 'http://localhost:3000';
+let serverHandle;
+let BASE_URL;
 
-test('Integration: Highlight and Save Note activity logging', async (t) => {
+test.before(async () => {
+  serverHandle = await startServer(0);
+  BASE_URL = `http://localhost:${serverHandle.port}`;
+});
+
+test.after(async () => {
+  if (!serverHandle?.server) return;
+  await new Promise((resolve, reject) => {
+    serverHandle.server.close((err) => (err ? reject(err) : resolve()));
+  });
+});
+
+test('Integration: Highlight and Save Note activity logging', async () => {
   // 1. Materialize an article first to get an ID
   const articleData = {
     url: `${BASE_URL}/index.html`,
@@ -11,22 +25,17 @@ test('Integration: Highlight and Save Note activity logging', async (t) => {
     feedUrl: 'https://example.com/rss'
   };
 
-  console.log('Step 1: Materializing article...');
   const matRes = await fetch(`${BASE_URL}/api/article/materialize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(articleData)
   });
   const matJson = await matRes.json();
-  if (matRes.status !== 200) {
-    console.error('Materialize failed:', matJson);
-  }
   assert.strictEqual(matRes.status, 200);
   const articleId = matJson.articleId;
   assert.ok(articleId, 'Article ID should be returned');
 
   // 2. Simulate a Highlight (which is just a note with a specific title/content)
-  console.log('Step 2: Simulating Highlight...');
   const highlightText = 'This is a highlighted snippet from the test article.';
   const highRes = await fetch(`${BASE_URL}/api/article/note`, {
     method: 'POST',
@@ -40,7 +49,6 @@ test('Integration: Highlight and Save Note activity logging', async (t) => {
   assert.strictEqual(highRes.status, 200);
 
   // 3. Simulate a Save Note
-  console.log('Step 3: Simulating Save Note...');
   const noteText = 'This is a personal note about the article.';
   const noteRes = await fetch(`${BASE_URL}/api/article/note`, {
     method: 'POST',
@@ -54,7 +62,6 @@ test('Integration: Highlight and Save Note activity logging', async (t) => {
   assert.strictEqual(noteRes.status, 200);
 
   // 4. Verify in Activity Log
-  console.log('Step 4: Verifying Activity Log...');
   const actRes = await fetch(`${BASE_URL}/api/activity?limit=10`);
   const actJson = await actRes.json();
   assert.ok(actJson.items.length >= 2, 'Should have at least 2 activity items');
@@ -67,6 +74,4 @@ test('Integration: Highlight and Save Note activity logging', async (t) => {
 
   assert.ok(noteLog, 'Note log should exist');
   assert.strictEqual(noteLog.payload.content, noteText, 'Note content should match');
-
-  console.log('Integration test passed successfully!');
 });
