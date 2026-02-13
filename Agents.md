@@ -79,32 +79,32 @@ node cli.js export 7   # Export last 7 days as Markdown
 - **OPML loading:** All `.opml` files in root loaded at startup
 
 ## DEBUG & EXECUTION PLAYBOOK (for faster, low-error operations)
-- **CLI init levels (重要):**
-  - Level 0: `help`, `book index --json` → 零副作用，不应触发 feed/OPML I/O
-  - Level 1: `recent/search/open/materialize` → 走本地 DB 优先
-  - Level 2: `list/read/all/sync` → 才加载 OPML + feeds
+- **CLI init levels (important):**
+  - Level 0: `help`, `book index --json` → zero side effects; should not trigger feed/OPML I/O
+  - Level 1: `recent/search/open/materialize` → prioritize local DB access
+  - Level 2: `list/read/all/sync` → only then load OPML + feeds
 - **CLI diagnostics flags:**
-  - `--verbose` / `-v`: 输出 feed 来源明细（`network_fetch` / `cache_fallback` / `min_interval_skip` / `memory_cache_hit`）
-  - `--quiet`: 隐藏初始化噪音
-  - `--json`: 机器可读输出（脚本友好）
+  - `--verbose` / `-v`: print feed source details (`network_fetch` / `cache_fallback` / `min_interval_skip` / `memory_cache_hit`)
+  - `--quiet`: hide initialization noise
+  - `--json`: machine-readable output (script-friendly)
 - **Web observability env:**
-  - `OPENBOOK_WEB_VERBOSE=true`：开启 API/业务结构化日志
-  - `OPENBOOK_SYNC_VERBOSE=true`：开启 sync/feed 详细日志
-  - 启动后会输出 `[Observability] OPENBOOK_WEB_VERBOSE=...`
-- **Trace correlation (local-first 核心):**
-  - 前端请求自动带 `x-openbook-trace-id` + `x-openbook-action-id`
-  - 服务端日志包含 `requestId/traceId/actionId`，可按 trace 快速串联完整用户操作
+  - `OPENBOOK_WEB_VERBOSE=true`: enable structured API/business logs
+  - `OPENBOOK_SYNC_VERBOSE=true`: enable detailed sync/feed logs
+  - On startup, `[Observability] OPENBOOK_WEB_VERBOSE=...` will be printed
+- **Trace correlation (local-first core):**
+  - Frontend requests automatically include `x-openbook-trace-id` + `x-openbook-action-id`
+  - Server logs include `requestId/traceId/actionId` to quickly stitch together a full user action chain by trace
 - **Key debug endpoints:**
-  - `GET /api/sync/status`：同步状态
-  - `POST /api/sync/warm`：可传 `verbose=true` 看抓取来源统计
-  - `GET /api/debug/recent-events?limit=100`：最近事件缓冲（快速回放）
+  - `GET /api/sync/status`: sync status
+  - `POST /api/sync/warm`: pass `verbose=true` to inspect fetch source stats
+  - `GET /api/debug/recent-events?limit=100`: recent event buffer (quick replay)
 - **UI integrated test shortcut (Actionbook):**
-  - 覆盖主链路：Reader 选文 → Favorite → Note 保存 → Activity 打开 → Notes 加载分页
-  - 用日志核对 API 调用顺序与 `trace/action` 是否一致
+  - Cover the main flow: Reader select article → Favorite → save Note → open Activity → load Notes pagination
+  - Use logs to verify API call order and consistency of `trace/action`
 - **Common pitfalls to avoid:**
-  - `EADDRINUSE`：重复起服务前先清理旧进程/端口
-  - 不要只看 UI 结果；需要同时核对 `activity_log` 与服务端 observability 日志
-  - `materialize` 是幂等的，重复操作出现 `already_materialized` 属于预期
+  - `EADDRINUSE`: clear old process/port usage before restarting the server
+  - Do not rely on UI results alone; also verify `activity_log` and server observability logs
+  - `materialize` is idempotent; repeated operations returning `already_materialized` are expected
 - **Trace helper script:**
   - `scripts/trace-grep.sh <traceId> [logFile]`
-  - 默认日志文件 `/tmp/openbook.log`，用于快速过滤一次会话的 API 全链路日志
+  - Default log file is `/tmp/openbook.log`, used to quickly filter a full API trace chain for one session
