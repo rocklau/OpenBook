@@ -105,3 +105,6 @@ node cli.js export 7   # Export last 7 days as Markdown
   - `EADDRINUSE`：重复起服务前先清理旧进程/端口
   - 不要只看 UI 结果；需要同时核对 `activity_log` 与服务端 observability 日志
   - `materialize` 是幂等的，重复操作出现 `already_materialized` 属于预期
+- **Trace helper script:**
+  - `scripts/trace-grep.sh <traceId> [logFile]`
+  - 默认日志文件 `/tmp/openbook.log`，用于快速过滤一次会话的 API 全链路日志
