@@ -20,6 +20,8 @@ function createArticleService(deps) {
     initFeeds
   } = deps;
 
+  const materializeInFlight = new Map();
+
   return {
     listFeeds() {
       return reader.feeds;
@@ -78,88 +80,104 @@ function createArticleService(deps) {
     },
 
     async materializeArticle({ url, feedUrl, title, publishedAt }) {
-      const u = new URL(url);
-      const normalizedUrl = u.toString();
+      const normalizedUrl = new URL(url).toString();
 
-      const existingByLink = repositories.getArticleByLink
-        ? repositories.getArticleByLink(normalizedUrl)
-        : null;
-      if (existingByLink?.markdown_path && fs.existsSync(existingByLink.markdown_path)) {
-        console.log(`[Materialize] Skipped already materialized article: ${existingByLink.id} (${normalizedUrl})`);
-        return {
-          ok: true,
-          articleId: existingByLink.id,
-          markdownPath: existingByLink.markdown_path,
-          skipped: true,
-          reason: 'already_materialized'
-        };
+      const inFlight = materializeInFlight.get(normalizedUrl);
+      if (inFlight) {
+        console.log(`[Materialize] Joined in-flight materialization: ${normalizedUrl}`);
+        return inFlight;
       }
 
-      const htmlRes = await queuedFetch(normalizedUrl, {
-        headers: { 'User-Agent': 'OpenBook RSS Reader (+https://github.com/rocklau/OpenBook)' }
-      });
-      const html = await htmlRes.text();
+      const run = (async () => {
+        const u = new URL(normalizedUrl);
 
-      const mdBody = htmlToMarkdown(html, { baseUrl: normalizedUrl });
+        const existingByLink = repositories.getArticleByLink
+          ? repositories.getArticleByLink(normalizedUrl)
+          : null;
+        if (existingByLink?.markdown_path && fs.existsSync(existingByLink.markdown_path)) {
+          console.log(`[Materialize] Skipped already materialized article: ${existingByLink.id} (${normalizedUrl})`);
+          return {
+            ok: true,
+            articleId: existingByLink.id,
+            markdownPath: existingByLink.markdown_path,
+            skipped: true,
+            reason: 'already_materialized'
+          };
+        }
 
-      ensureDir(ARTICLES_DIR);
-      const now = new Date();
-      const y = String(now.getFullYear());
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const dir = path.join(ARTICLES_DIR, y, m);
-      ensureDir(dir);
-
-      const slug = safeFileName(title || u.hostname + '-' + u.pathname.split('/').filter(Boolean).pop());
-      const filePath = path.join(dir, `${slug}.md`);
-
-      const frontMatter = {
-        title: title || null,
-        url: u.toString(),
-        feed_url: feedUrl || null,
-        published_at: publishedAt || null,
-        fetched_at: new Date().toISOString(),
-        source: 'html'
-      };
-
-      const yaml = Object.entries(frontMatter)
-        .filter(([, v]) => v != null && v !== '')
-        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-        .join('\n');
-
-      const md = `---\n${yaml}\n---\n\n${mdBody}\n`;
-      fs.writeFileSync(filePath, md, 'utf-8');
-
-      const articleFeedUrl = feedUrl || u.origin;
-      repositories.ensureFeedExists(articleFeedUrl, u.hostname);
-
-      const articleId = stableId(articleFeedUrl, u.toString());
-      repositories.upsertArticle({
-        id: articleId,
-        feed_url: articleFeedUrl,
-        guid: null,
-        link: u.toString(),
-        title: title || null,
-        author: null,
-        published_at: publishedAt || null,
-        content_html: null,
-        content_snippet: null,
-        markdown_path: filePath
-      });
-
-      const state = repositories.getArticleState(articleId);
-      if (state && state.is_favorite) {
-        downloadResources(filePath, articleId).catch(err => {
-          console.error(`[Server] Error downloading resources for favorited article ${articleId} during materialize:`, err);
+        const htmlRes = await queuedFetch(normalizedUrl, {
+          headers: { 'User-Agent': 'OpenBook RSS Reader (+https://github.com/rocklau/OpenBook)' }
         });
+        const html = await htmlRes.text();
+
+        const mdBody = htmlToMarkdown(html, { baseUrl: normalizedUrl });
+
+        ensureDir(ARTICLES_DIR);
+        const now = new Date();
+        const y = String(now.getFullYear());
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const dir = path.join(ARTICLES_DIR, y, m);
+        ensureDir(dir);
+
+        const slug = safeFileName(title || u.hostname + '-' + u.pathname.split('/').filter(Boolean).pop());
+        const filePath = path.join(dir, `${slug}.md`);
+
+        const frontMatter = {
+          title: title || null,
+          url: normalizedUrl,
+          feed_url: feedUrl || null,
+          published_at: publishedAt || null,
+          fetched_at: new Date().toISOString(),
+          source: 'html'
+        };
+
+        const yaml = Object.entries(frontMatter)
+          .filter(([, v]) => v != null && v !== '')
+          .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+          .join('\n');
+
+        const md = `---\n${yaml}\n---\n\n${mdBody}\n`;
+        fs.writeFileSync(filePath, md, 'utf-8');
+
+        const articleFeedUrl = feedUrl || u.origin;
+        repositories.ensureFeedExists(articleFeedUrl, u.hostname);
+
+        const articleId = stableId(articleFeedUrl, normalizedUrl);
+        repositories.upsertArticle({
+          id: articleId,
+          feed_url: articleFeedUrl,
+          guid: null,
+          link: normalizedUrl,
+          title: title || null,
+          author: null,
+          published_at: publishedAt || null,
+          content_html: null,
+          content_snippet: null,
+          markdown_path: filePath
+        });
+
+        const state = repositories.getArticleState(articleId);
+        if (state && state.is_favorite) {
+          downloadResources(filePath, articleId).catch(err => {
+            console.error(`[Server] Error downloading resources for favorited article ${articleId} during materialize:`, err);
+          });
+        }
+
+        repositories.logActivity(ACTIVITY_TYPES.MATERIALIZE, articleId, JSON.stringify({
+          url: normalizedUrl,
+          markdownPath: filePath,
+          title: title || null
+        }));
+
+        return { ok: true, articleId, markdownPath: filePath };
+      })();
+
+      materializeInFlight.set(normalizedUrl, run);
+      try {
+        return await run;
+      } finally {
+        materializeInFlight.delete(normalizedUrl);
       }
-
-      repositories.logActivity(ACTIVITY_TYPES.MATERIALIZE, articleId, JSON.stringify({
-        url: u.toString(),
-        markdownPath: filePath,
-        title: title || null
-      }));
-
-      return { ok: true, articleId, markdownPath: filePath };
     },
 
     updateArticleState({ articleId, isRead, isFavorite }) {
