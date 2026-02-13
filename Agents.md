@@ -77,3 +77,31 @@ node cli.js export 7   # Export last 7 days as Markdown
 - **WAL mode:** SQLite runs with `journal_mode = WAL` for concurrency
 - **No migrations table:** Schema version not tracked; manual migration only
 - **OPML loading:** All `.opml` files in root loaded at startup
+
+## DEBUG & EXECUTION PLAYBOOK (for faster, low-error operations)
+- **CLI init levels (重要):**
+  - Level 0: `help`, `book index --json` → 零副作用，不应触发 feed/OPML I/O
+  - Level 1: `recent/search/open/materialize` → 走本地 DB 优先
+  - Level 2: `list/read/all/sync` → 才加载 OPML + feeds
+- **CLI diagnostics flags:**
+  - `--verbose` / `-v`: 输出 feed 来源明细（`network_fetch` / `cache_fallback` / `min_interval_skip` / `memory_cache_hit`）
+  - `--quiet`: 隐藏初始化噪音
+  - `--json`: 机器可读输出（脚本友好）
+- **Web observability env:**
+  - `OPENBOOK_WEB_VERBOSE=true`：开启 API/业务结构化日志
+  - `OPENBOOK_SYNC_VERBOSE=true`：开启 sync/feed 详细日志
+  - 启动后会输出 `[Observability] OPENBOOK_WEB_VERBOSE=...`
+- **Trace correlation (local-first 核心):**
+  - 前端请求自动带 `x-openbook-trace-id` + `x-openbook-action-id`
+  - 服务端日志包含 `requestId/traceId/actionId`，可按 trace 快速串联完整用户操作
+- **Key debug endpoints:**
+  - `GET /api/sync/status`：同步状态
+  - `POST /api/sync/warm`：可传 `verbose=true` 看抓取来源统计
+  - `GET /api/debug/recent-events?limit=100`：最近事件缓冲（快速回放）
+- **UI integrated test shortcut (Actionbook):**
+  - 覆盖主链路：Reader 选文 → Favorite → Note 保存 → Activity 打开 → Notes 加载分页
+  - 用日志核对 API 调用顺序与 `trace/action` 是否一致
+- **Common pitfalls to avoid:**
+  - `EADDRINUSE`：重复起服务前先清理旧进程/端口
+  - 不要只看 UI 结果；需要同时核对 `activity_log` 与服务端 observability 日志
+  - `materialize` 是幂等的，重复操作出现 `already_materialized` 属于预期
