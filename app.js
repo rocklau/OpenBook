@@ -15,6 +15,7 @@ const { registerActivityRoutes } = require('./routes/activity');
 const { createArticleService } = require('./services/articleService');
 const { createActivityService } = require('./services/activityService');
 const { createRepositories } = require('./repositories');
+const { isVerboseEnabled, createLogger, createApiRequestLogger } = require('./lib/observability');
 
 function createAppContext() {
   const app = express();
@@ -22,8 +23,11 @@ function createAppContext() {
   const featureDb = openDb();
   migrate(featureDb);
 
+  const logger = createLogger({ verbose: isVerboseEnabled() });
+
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
+  app.use(createApiRequestLogger({ logger }));
   app.use(express.static('public'));
   app.use('/data', express.static(DATA_DIR));
 
@@ -85,6 +89,7 @@ function createAppContext() {
     app,
     reader,
     featureDb,
+    logger,
     stableId,
     safeFileName,
     ensureDir,
@@ -103,7 +108,7 @@ function createAppContext() {
 
   const articleService = createArticleService(baseDeps);
   const activityService = createActivityService(baseDeps);
-  const routeDeps = { articleService, activityService };
+  const routeDeps = { articleService, activityService, logger };
 
   registerArticleRoutes(app, routeDeps);
   registerActivityRoutes(app, routeDeps);

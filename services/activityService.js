@@ -3,7 +3,7 @@ function mdEscape(text) {
 }
 
 function createActivityService(deps) {
-  const { repositories, ACTIVITY_TYPES } = deps;
+  const { repositories, ACTIVITY_TYPES, logger = console } = deps;
 
   return {
     listActivity({ limit, offset }) {
@@ -24,6 +24,7 @@ function createActivityService(deps) {
         } : null
       }));
 
+      logger.debug('ActivityService', 'listActivity.result', { limit, offset, count: rows.length });
       return { limit, offset, items: rows };
     },
 
@@ -68,7 +69,9 @@ function createActivityService(deps) {
         lines.push(`| ${mdEscape(r.created_at)} | ${mdEscape(type)} | ${mdEscape(title)} | ${mdEscape(link)} | ${mdEscape(details)} |`);
       }
 
-      return lines.join('\n') + '\n';
+      const output = lines.join('\n') + '\n';
+      logger.debug('ActivityService', 'exportMarkdown.result', { days, rows: rows.length, bytes: Buffer.byteLength(output, 'utf-8') });
+      return output;
     }
   };
 }

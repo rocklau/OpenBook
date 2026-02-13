@@ -17,7 +17,8 @@ function createArticleService(deps) {
     writeJsonIndex,
     repositories,
     processArticles,
-    initFeeds
+    initFeeds,
+    logger = console
   } = deps;
 
   const materializeInFlight = new Map();
@@ -56,6 +57,11 @@ function createArticleService(deps) {
 
   async function listArticlesImpl(limit = 50, options = {}) {
     const articles = await reader.getAllArticles(limit, options);
+    logger.debug('ArticleService', 'listArticlesImpl.fetched', {
+      limit,
+      count: Array.isArray(articles) ? articles.length : 0,
+      fetchStats: reader.lastFetchStats || null
+    });
 
     const index = readJsonIndex();
     const feedSet = new Map(index.feeds.map(f => [f.url, f]));
@@ -134,6 +140,7 @@ function createArticleService(deps) {
 
     const run = (async () => {
       const beforeCount = countArticles();
+      logger.info('Sync', 'warm.start', { reason, limit, timeoutMs, verbose, beforeCount });
       try {
         let articles;
         if (timeoutMs > 0) {
@@ -152,6 +159,12 @@ function createArticleService(deps) {
         syncState.status = 'success';
         syncState.lastCount = Array.isArray(articles) ? articles.length : 0;
         syncState.lastSummary = summary;
+        logger.info('Sync', 'warm.success', {
+          reason,
+          count: syncState.lastCount,
+          summary,
+          fetchStats
+        });
         return {
           ok: true,
           status: syncState.status,
@@ -165,6 +178,7 @@ function createArticleService(deps) {
         syncState.status = error?.message === 'warm_sync_timeout' ? 'timeout' : 'error';
         syncState.lastError = error?.message || String(error);
         syncState.lastSummary = null;
+        logger.error('Sync', 'warm.failed', { reason, status: syncState.status, error: syncState.lastError });
         return {
           ok: false,
           status: syncState.status,

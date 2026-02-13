@@ -1,6 +1,7 @@
 const { createAppContext } = require('./app');
 
 const PORT = process.env.PORT || 3000;
+const WEB_VERBOSE = String(process.env.OPENBOOK_WEB_VERBOSE || process.env.OPENBOOK_SYNC_VERBOSE || 'false').toLowerCase();
 
 const context = createAppContext();
 const { app, initFeeds, processArticles, startWarmSync, getSyncStatus } = context;
@@ -12,6 +13,7 @@ async function startServer(port = PORT) {
     const server = app.listen(port, () => {
       const actualPort = server.address()?.port;
       console.log(`RSS Reader server running at http://localhost:${actualPort}`);
+      console.log(`[Observability] OPENBOOK_WEB_VERBOSE=${WEB_VERBOSE}`);
 
       const shouldWarmSync = String(process.env.OPENBOOK_STARTUP_SYNC || 'true').toLowerCase() !== 'false';
       if (shouldWarmSync) {
