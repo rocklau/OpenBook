@@ -32,6 +32,27 @@ function createArticleService(deps) {
     inFlight: null
   };
 
+  function mapDbArticleRow(row) {
+    return {
+      id: row.id,
+      feedUrl: row.feed_url,
+      feedName: (() => {
+        const f = reader.feeds.find(x => x.url === row.feed_url);
+        return f?.name || row.feed_url;
+      })(),
+      title: row.title,
+      link: row.link,
+      guid: row.guid,
+      pubDate: row.published_at,
+      author: row.author,
+      content: row.content_html,
+      contentSnippet: row.content_snippet,
+      markdownPath: row.markdown_path,
+      isRead: !!row.is_read,
+      isFavorite: !!row.is_favorite
+    };
+  }
+
   async function listArticlesImpl(limit = 50) {
     const articles = await reader.getAllArticles(limit);
 
@@ -126,13 +147,25 @@ function createArticleService(deps) {
     },
 
     async listArticles(limit = 50) {
-      return listArticlesImpl(limit);
+      if (!repositories.listArticlesRecent) return listArticlesImpl(limit);
+      return repositories.listArticlesRecent(limit).map(mapDbArticleRow);
     },
 
     async listArticlesByDate(date) {
-      const articles = await reader.getArticlesByDate(date);
-      processArticles(articles);
-      return articles;
+      if (!repositories.listArticlesByDate) {
+        const articles = await reader.getArticlesByDate(date);
+        processArticles(articles);
+        return articles;
+      }
+
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+
+      return repositories
+        .listArticlesByDate(start.toISOString(), end.toISOString(), 500)
+        .map(mapDbArticleRow);
     },
 
     async getFeedByIndex(index) {
@@ -141,11 +174,20 @@ function createArticleService(deps) {
       }
 
       const feed = reader.feeds[index];
-      const parsed = await reader.parseFeed(feed.url);
-      if (!parsed) return undefined;
+      if (!repositories.listArticlesByFeed) {
+        const parsed = await reader.parseFeed(feed.url);
+        if (!parsed) return undefined;
+        processArticles(parsed.items);
+        return parsed;
+      }
 
-      processArticles(parsed.items);
-      return parsed;
+      const items = repositories.listArticlesByFeed(feed.url, 200).map(mapDbArticleRow);
+      return {
+        title: feed.name,
+        description: '',
+        link: feed.url,
+        items
+      };
     },
 
     async refreshFeeds() {

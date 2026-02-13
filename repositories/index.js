@@ -56,6 +56,33 @@ function createRepositories(featureDb) {
     LIMIT 2000
   `);
 
+  const stmtListArticlesRecent = featureDb.prepare(`
+    SELECT ar.*, st.is_read, st.is_favorite
+    FROM articles ar
+    LEFT JOIN article_state st ON st.article_id = ar.id
+    ORDER BY datetime(ar.published_at) DESC, datetime(ar.updated_at) DESC
+    LIMIT ?
+  `);
+
+  const stmtListArticlesByDate = featureDb.prepare(`
+    SELECT ar.*, st.is_read, st.is_favorite
+    FROM articles ar
+    LEFT JOIN article_state st ON st.article_id = ar.id
+    WHERE datetime(ar.published_at) >= datetime(?)
+      AND datetime(ar.published_at) <= datetime(?)
+    ORDER BY datetime(ar.published_at) DESC, datetime(ar.updated_at) DESC
+    LIMIT ?
+  `);
+
+  const stmtListArticlesByFeed = featureDb.prepare(`
+    SELECT ar.*, st.is_read, st.is_favorite
+    FROM articles ar
+    LEFT JOIN article_state st ON st.article_id = ar.id
+    WHERE ar.feed_url = ?
+    ORDER BY datetime(ar.published_at) DESC, datetime(ar.updated_at) DESC
+    LIMIT ?
+  `);
+
   return {
     upsertArticle: (payload) => stmtUpsertArticle.run(payload),
     setArticleState: (articleId, isRead, isFavorite) => stmtSetState.run(articleId, isRead, isFavorite),
@@ -67,6 +94,9 @@ function createRepositories(featureDb) {
     logActivity: (type, articleId, payloadJson) => stmtLogActivity.run(type, articleId, payloadJson),
     listActivity: (limit, offset) => stmtGetActivity.all(limit, offset),
     listActivitySince: (isoDate) => stmtActivitySince.all(isoDate),
+    listArticlesRecent: (limit) => stmtListArticlesRecent.all(limit),
+    listArticlesByDate: (fromIso, toIso, limit = 500) => stmtListArticlesByDate.all(fromIso, toIso, limit),
+    listArticlesByFeed: (feedUrl, limit = 200) => stmtListArticlesByFeed.all(feedUrl, limit),
     ensureFeedExists: (url, name) => {
       if (!stmtCheckFeed.get(url)) stmtInsertFeed.run(url, name);
     }
