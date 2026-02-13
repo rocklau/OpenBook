@@ -126,6 +126,9 @@ node cli.js search "AI"
 # Show last N articles
 node cli.js recent 20
 
+# Verbose fetch-source diagnostics (network/cache/min-interval/memory)
+node cli.js -v
+
 # Knowledge Management
 node cli.js notes              # List all notes and highlights
 node cli.js highlights         # Alias for notes
@@ -139,6 +142,7 @@ node cli.js export 7           # Export last 7 days as Markdown
 
 # Statistics
 node cli.js stats              # Show database statistics
+node cli.js book index --json  # Agent-friendly /data index (DB + index.json + dirs)
 node cli.js help               # Show help
 ```
 
@@ -190,6 +194,9 @@ node --test test/integration.test.js # Integration tests only
 | `/api/article/note` | POST | Create a note or highlight |
 | `/api/activity` | GET | Fetch activity log (Favorites, Notes, Highlights) |
 | `/api/export/markdown` | GET | Export activity as Markdown review |
+| `/api/sync/warm` | POST | Trigger sync warm-up (`verbose=true` supported) |
+| `/api/sync/status` | GET | Get latest sync status/summary |
+| `/api/debug/recent-events` | GET | Read recent structured debug events (local observability) |
 
 ## Screenshot Maintenance Playbook (Actionbook)
 
@@ -228,6 +235,26 @@ This project uses README screenshots as part of product communication. The workf
 - **Use app view functions for deterministic state**: for this codebase, `switchToReaderView()`, `switchToNotesView()`, `toggleMobileSidebar(true)`, `closeMobileSidebar()` are reliable for screenshot setup.
 - **Stable README rendering**: Markdown table layout is more consistent than free-floating `<img>` tags across GitHub widths.
 - **Keep commits focused**: include screenshot assets used by README; exclude temp/debug files.
+
+## Observability (Local-first Debugging)
+
+Enable structured server-side observability:
+
+```bash
+OPENBOOK_WEB_VERBOSE=true OPENBOOK_SYNC_VERBOSE=true npm start
+```
+
+What you get:
+- API request lifecycle logs (`request.start` / `request.end`)
+- Correlated IDs: `requestId`, `traceId`, `actionId`
+- Sync source diagnostics (`network_fetch`, `cache_fallback`, `min_interval_skip`, `memory_cache_hit`)
+- Recent event buffer via `/api/debug/recent-events`
+
+Quick trace workflow:
+1. Reproduce in UI
+2. Find `traceId` in logs
+3. Filter log lines by that `traceId`
+4. Cross-check `/api/debug/recent-events?limit=100`
 
 ## Documentation
 
