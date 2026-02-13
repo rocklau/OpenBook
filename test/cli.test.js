@@ -135,6 +135,8 @@ describe('CLI argv dispatch', () => {
     assert.strictEqual(result.status, 0);
     assert.match(result.stdout, /OpenBook CLI - RSS Reader & Knowledge Collector/);
     assert.match(result.stdout, /search <query>/);
+    assert.doesNotMatch(result.stdout, /Loaded a total of/);
+    assert.doesNotMatch(result.stdout, /Found .*OPML/);
   });
 
   it('node cli.js search without query should print usage hint', () => {
@@ -147,5 +149,17 @@ describe('CLI argv dispatch', () => {
     assert.strictEqual(result.status, 0);
     assert.match(result.stdout, /Please provide a search query/);
     assert.match(result.stdout, /Usage: node cli\.js search <keyword>/);
+  });
+
+  it('node cli.js unknown command should hard fail with help', () => {
+    const result = spawnSync('node', [path.join(oldCwd, 'cli.js'), 'foo'], {
+      cwd: tmpDir,
+      encoding: 'utf-8',
+      env: { ...process.env, OPENBOOK_ALLOW_PRIVATE_FEEDS: 'true' }
+    });
+
+    assert.notStrictEqual(result.status, 0);
+    assert.match(result.stderr, /Unknown command: foo/);
+    assert.match(result.stdout, /OpenBook CLI - RSS Reader & Knowledge Collector/);
   });
 });

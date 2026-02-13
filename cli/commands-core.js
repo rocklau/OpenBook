@@ -116,8 +116,9 @@ async function runShowRecent(reader, limit, displayArticles) {
   displayArticles(articles.slice(0, count));
 }
 
-async function runSyncFeeds({ limit = 50, timeoutMs = 8000 } = {}) {
-  console.log(`🔄 Syncing feeds (limit=${limit}, timeout=${timeoutMs}ms)...`);
+async function runSyncFeeds({ limit = 50, timeoutMs = 8000, jsonMode = false, quiet = false } = {}) {
+  if (!jsonMode && !quiet) console.log(`🔄 Syncing feeds (limit=${limit}, timeout=${timeoutMs}ms)...`);
+
   try {
     const response = await fetch('http://localhost:3000/api/sync/warm', {
       method: 'POST',
@@ -125,13 +126,31 @@ async function runSyncFeeds({ limit = 50, timeoutMs = 8000 } = {}) {
       body: JSON.stringify({ limit, timeoutMs })
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const result = await response.json();
+    if (jsonMode) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
     if (result.ok) {
       console.log(`✅ Sync status=${result.status}, count=${result.count}`);
+      if (result.summary) {
+        console.log('   Summary:');
+        console.log(`   - feeds_checked: ${result.summary.feeds_checked ?? 0}`);
+        console.log(`   - network_fetch_count: ${result.summary.network_fetch_count ?? 0}`);
+        console.log(`   - cache_fallback_count: ${result.summary.cache_fallback_count ?? 0}`);
+        console.log(`   - min_interval_skip_count: ${result.summary.min_interval_skip_count ?? 0}`);
+        console.log(`   - new_articles_count: ${result.summary.new_articles_count ?? 0}`);
+      }
     } else {
       console.log(`⚠️ Sync status=${result.status}, error=${result.error || 'unknown'}`);
     }
   } catch (e) {
+    if (jsonMode) {
+      console.log(JSON.stringify({ ok: false, error: e.message }, null, 2));
+      return;
+    }
     console.log(`❌ Error: ${e.message}`);
     console.log('   Make sure the server is running: npm start');
   }

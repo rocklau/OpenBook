@@ -71,6 +71,7 @@ class RSSReader {
     this.cache = new Map();
     this.cacheExpiry = 5 * 60 * 1000;
     this.feedInFlight = new Map();
+    this.lastFetchStats = null;
 
     // Storage
     this.db = openDb();
@@ -183,6 +184,7 @@ class RSSReader {
 
   async parseFeed(url, options = {}) {
     const normalizedUrl = new URL(url).toString();
+    const { stats = null, verbose = false } = options;
     const inFlight = this.feedInFlight.get(normalizedUrl);
     if (inFlight) return inFlight;
 
@@ -192,7 +194,11 @@ class RSSReader {
 
         // in-memory short cache for UI bursts
         const cachedMem = this.cache.get(normalizedUrl);
-        if (!force && cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) return cachedMem.data;
+        if (!force && cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) {
+          if (stats) stats.memory_cache_hit = (stats.memory_cache_hit || 0) + 1;
+          if (verbose) console.log(`[feed] memory_cache_hit ${normalizedUrl}`);
+          return cachedMem.data;
+        }
 
         const minSyncIntervalMs = Number(process.env.OPENBOOK_FEED_MIN_SYNC_INTERVAL_MS || 120000);
         const syncState = this.stmtGetSyncState.get(normalizedUrl);
@@ -220,6 +226,8 @@ class RSSReader {
               };
               this.cache.set(normalizedUrl, { data: result, timestamp: Date.now() });
               this.logFeedSync(normalizedUrl, { status: syncState.last_status || 200, fromCache: true, reason: 'min_interval_skip' });
+              if (stats) stats.min_interval_skip = (stats.min_interval_skip || 0) + 1;
+              if (verbose) console.log(`[feed] min_interval_skip ${normalizedUrl}`);
               return result;
             }
           }
@@ -258,9 +266,17 @@ class RSSReader {
           lastModified: cachedMeta?.last_modified || null
         });
 
+        if (stats) {
+          if (fromCache) stats.cache_fallback = (stats.cache_fallback || 0) + 1;
+          else stats.network_fetch = (stats.network_fetch || 0) + 1;
+        }
+        if (verbose) console.log(`[feed] ${fromCache ? 'cache_fallback' : 'network_fetch'} status=${status || 200} ${normalizedUrl}`);
+
         return result;
       } catch (error) {
         this.logFeedSync(normalizedUrl, { status: error?.status || null, fromCache: false, reason: `error:${error.message}` });
+        if (stats) stats.parse_error = (stats.parse_error || 0) + 1;
+        if (verbose) console.log(`[feed] parse_error ${normalizedUrl}: ${error.message}`);
         console.error(`Error parsing ${normalizedUrl}:`, error.message);
         return null;
       }
@@ -277,10 +293,14 @@ class RSSReader {
   async getAllArticles(limit = 50, options = {}) {
     const allArticles = [];
     const batchSize = 10;
+    const stats = options.stats || { feeds_seen: 0, network_fetch: 0, cache_fallback: 0, min_interval_skip: 0, memory_cache_hit: 0, parse_error: 0 };
 
     for (let i = 0; i < this.feeds.length; i += batchSize) {
       const batch = this.feeds.slice(i, i + batchSize);
-      const results = await Promise.all(batch.map(feed => this.parseFeed(feed.url, options)));
+      const results = await Promise.all(batch.map(feed => {
+        stats.feeds_seen += 1;
+        return this.parseFeed(feed.url, { ...options, stats });
+      }));
 
       results.forEach((parsed, idx) => {
         if (!parsed) return;
@@ -298,9 +318,12 @@ class RSSReader {
       if (allArticles.length >= limit * 3) break;
     }
 
-    return allArticles
+    const sorted = allArticles
       .sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0))
       .slice(0, limit * 2);
+
+    this.lastFetchStats = stats;
+    return sorted;
   }
 
   async getArticlesByDate(date, daysWindow = 1) {

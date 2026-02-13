@@ -88,7 +88,51 @@ function createArticleService(deps) {
     syncState.finishedAt = null;
     syncState.lastError = null;
 
+    const countArticles = () => {
+      try {
+        if (!reader?.db) return 0;
+        const row = reader.db.prepare('SELECT COUNT(*) AS c FROM articles').get();
+        return row?.c || 0;
+      } catch {
+        return 0;
+      }
+    };
+
+    const summarizeSync = (startedAtIso, beforeCount, afterCount) => {
+      try {
+        if (!reader?.db) return null;
+
+        const params = [startedAtIso];
+        const counts = reader.db.prepare(`
+          SELECT
+            COUNT(DISTINCT feed_url) AS feeds_checked,
+            SUM(CASE WHEN reason='network_fetch' THEN 1 ELSE 0 END) AS network_fetch_count,
+            SUM(CASE WHEN reason='cache_fallback' THEN 1 ELSE 0 END) AS cache_fallback_count,
+            SUM(CASE WHEN reason='min_interval_skip' THEN 1 ELSE 0 END) AS min_interval_skip_count
+          FROM feed_sync_log
+          WHERE fetched_at >= datetime(?)
+        `).get(...params) || {};
+
+        return {
+          feeds_checked: counts.feeds_checked || 0,
+          network_fetch_count: counts.network_fetch_count || 0,
+          cache_fallback_count: counts.cache_fallback_count || 0,
+          min_interval_skip_count: counts.min_interval_skip_count || 0,
+          new_articles_count: Math.max(0, (afterCount || 0) - (beforeCount || 0))
+        };
+      } catch {
+        return {
+          feeds_checked: 0,
+          network_fetch_count: 0,
+          cache_fallback_count: 0,
+          min_interval_skip_count: 0,
+          new_articles_count: Math.max(0, (afterCount || 0) - (beforeCount || 0))
+        };
+      }
+    };
+
     const run = (async () => {
+      const beforeCount = countArticles();
       try {
         let articles;
         if (timeoutMs > 0) {
@@ -100,6 +144,9 @@ function createArticleService(deps) {
           articles = await listArticlesImpl(limit);
         }
 
+        const afterCount = countArticles();
+        const summary = summarizeSync(syncState.startedAt, beforeCount, afterCount);
+
         syncState.status = 'success';
         syncState.lastCount = Array.isArray(articles) ? articles.length : 0;
         return {
@@ -107,7 +154,8 @@ function createArticleService(deps) {
           status: syncState.status,
           reason,
           count: syncState.lastCount,
-          startedAt: syncState.startedAt
+          startedAt: syncState.startedAt,
+          summary
         };
       } catch (error) {
         syncState.status = error?.message === 'warm_sync_timeout' ? 'timeout' : 'error';
