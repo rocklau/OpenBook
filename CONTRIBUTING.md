@@ -52,6 +52,28 @@ When changing `cli.js`, keep tests aligned with real behavior:
 - Avoid mixing unrelated refactors in one PR.
 - Keep API/documentation updates in sync when behavior changes.
 
+## Materialization & Collector Invariants
+
+When changing `services/articleService.js`, `repositories/index.js`, or `collector.js`, preserve these verified behaviors:
+
+- `materializeArticle()` performs an article-level idempotency check by normalized URL (`new URL(url).toString()`).
+- If `repositories.getArticleByLink(normalizedUrl)` returns a row with an existing `markdown_path` file, materialization must return early with:
+  - `skipped: true`
+  - `reason: 'already_materialized'`
+- In that skip path, network fetch must not run.
+- Collector deduplicates image downloads by resolved absolute URL within a run.
+- Collector reuses previously downloaded assets across reruns by URL-hash filename match.
+- Collector rewrites markdown image links to local asset paths only when content actually changed.
+
+### Tests to run for these paths
+
+```bash
+node --test test/collector.integration.test.js
+node --test test/services.test.js
+```
+
+These tests currently validate dedupe/rewrite/rerun behavior in collector and skip-idempotency behavior in `articleService.materializeArticle()`.
+
 ## Screenshot Contribution Guide (Actionbook)
 
 When updating README screenshots, follow this process:
