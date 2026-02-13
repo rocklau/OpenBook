@@ -1,0 +1,140 @@
+async function loadFeeds() {
+  try {
+    feeds = await obGetJson('/api/feeds', { action: 'load-feeds' });
+    renderFeedList();
+  } catch (e) {}
+}
+
+function renderFeedList() {
+  const list = document.getElementById('feedList');
+  const search = document.getElementById('feedSearch').value.toLowerCase();
+  const filtered = feeds.filter(f => f.name.toLowerCase().includes(search));
+
+  list.innerHTML = `
+    <li class="feed-item ${currentFeed === 'all' ? 'active' : ''}" onclick="selectFeed('all')">
+      <span class="name">By Date</span>
+    </li>
+    ${filtered.map((f, i) => `
+      <li class="feed-item ${currentFeed === i ? 'active' : ''}" onclick="selectFeed(${feeds.indexOf(f)})">
+        <span class="name">${f.name}</span>
+      </li>
+    `).join('')}
+  `;
+  document.getElementById('feedStats').textContent = `${feeds.length} feeds`;
+}
+
+function filterFeeds() { renderFeedList(); }
+
+function toggleMobileSidebar(show) {
+  const s = document.querySelector('.sidebar');
+  if (show) s.classList.add('active');
+  else s.classList.remove('active');
+}
+
+function closeMobileSidebar() { toggleMobileSidebar(false); }
+
+async function selectFeed(index) {
+  currentFeed = index;
+  switchToReaderView();
+  closeMobileSidebar();
+  if (index === 'all') {
+    loadArticlesByDate(new Date());
+  } else {
+    const articleList = document.getElementById('articleList');
+    articleList.innerHTML = '<div class="spinner"></div>';
+    try {
+      const parsed = await obGetJson(`/api/feed/${index}`, { action: 'select-feed' });
+      currentArticles = parsed.items;
+      renderArticleList(currentArticles);
+      document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
+      document.getElementById('currentDate').textContent = feeds[index].name;
+    } catch (e) {}
+  }
+  renderFeedList();
+}
+
+async function loadArticlesByDate(date) {
+  currentDate = date;
+  const articleList = document.getElementById('articleList');
+  articleList.innerHTML = '<div class="spinner"></div>';
+  updateDateDisplay();
+  try {
+    currentArticles = await obGetJson(`/api/articles/by-date?date=${date.toISOString().split('T')[0]}`, { action: 'load-by-date' });
+    renderArticleList(currentArticles);
+    document.getElementById('listSubtitle').textContent = `${currentArticles.length} articles`;
+  } catch (e) {}
+}
+
+function updateDateDisplay() {
+  const d = document.getElementById('currentDate');
+  const today = new Date().toISOString().split('T')[0];
+  const sel = currentDate.toISOString().split('T')[0];
+  d.textContent = today === sel ? 'Today' : currentDate.toLocaleDateString();
+}
+
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  loadArticlesByDate(currentDate);
+}
+
+function renderArticleList(items) {
+  const list = document.getElementById('articleList');
+  list.innerHTML = items.map((item, i) => `
+    <li class="article-item ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${i}, this)">
+      <div class="article-item-title">${item.title}</div>
+      <div class="article-item-meta"><span>${item.feedName || ''}</span></div>
+    </li>
+  `).join('');
+}
+
+function selectArticle(index, el) {
+  currentArticle = currentArticles[index];
+  document.querySelectorAll('.article-item').forEach(li => li.classList.remove('active'));
+  el.classList.add('active');
+  renderArticleContent(currentArticle);
+
+  if (window.innerWidth <= 768) {
+    document.getElementById('contentCol').classList.add('active');
+    document.body.classList.add('body-has-selection');
+  }
+
+  if (!currentArticle.isRead) {
+    currentArticle.isRead = true;
+    el.classList.add('is-read');
+    apiPost('/api/article/state', { articleId: currentArticle.id, isRead: true });
+  }
+}
+
+function closeArticle() {
+  document.getElementById('contentCol').classList.remove('active');
+  document.body.classList.remove('body-has-selection');
+}
+
+function renderArticleContent(article) {
+  const col = document.getElementById('contentCol');
+  const hasFull = article.content || article['content:encoded'];
+  const actionsHtml = `
+    <div class="actionbar"><div class="actionbar-inner">
+      <div class="actionbar-left">
+        <button class="action-btn back-btn" onclick="closeArticle()">←</button>
+        <button class="action-btn" onclick="toggleFavoriteCurrent()">⭐</button>
+        <button class="action-btn" onclick="openNoteEditor()">📝</button>
+      </div>
+      <div class="actionbar-right"><button class="action-btn" onclick="toggleActivityPanel()">Log</button></div>
+    </div>
+    <div class="note-editor-container" id="noteEditor">
+      <textarea class="note-editor-textarea" id="noteTextarea" placeholder="Write a note..."></textarea>
+      <div style="margin-top:10px; display:flex; gap:10px; justify-content:flex-end;">
+        <button class="action-btn" onclick="closeNoteEditor()">Cancel</button>
+        <button class="action-btn" onclick="saveNote()">Save</button>
+      </div>
+    </div>
+    </div>
+  `;
+
+  if (hasFull) {
+    col.innerHTML = actionsHtml + `<div class="content-body"><div class="content-body-inner" id="contentBody">${sanitizeHtml(hasFull)}</div></div>`;
+  } else {
+    col.innerHTML = actionsHtml + `<iframe class="content-iframe" src="${article.link}"></iframe>`;
+  }
+}

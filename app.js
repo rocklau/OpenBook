@@ -15,6 +15,7 @@ const { registerActivityRoutes } = require('./routes/activity');
 const { createArticleService } = require('./services/articleService');
 const { createActivityService } = require('./services/activityService');
 const { createRepositories } = require('./repositories');
+const { registerDebugRoutes } = require('./routes/debug');
 const { isVerboseEnabled, createLogger, createApiRequestLogger } = require('./lib/observability');
 
 function createAppContext() {
@@ -112,6 +113,7 @@ function createAppContext() {
 
   registerArticleRoutes(app, routeDeps);
   registerActivityRoutes(app, routeDeps);
+  registerDebugRoutes(app, routeDeps);
 
   return {
     app,
