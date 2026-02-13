@@ -94,6 +94,22 @@ class RSSReader {
       VALUES (?, ?)
       ON CONFLICT(url) DO UPDATE SET name=excluded.name
     `);
+
+    this.stmtGetSyncState = this.db.prepare('SELECT * FROM feed_sync_state WHERE feed_url=?');
+    this.stmtUpsertSyncState = this.db.prepare(`
+      INSERT INTO feed_sync_state(feed_url, last_checked_at, last_status, etag, last_modified, updated_at)
+      VALUES (@feed_url, datetime('now'), @last_status, @etag, @last_modified, datetime('now'))
+      ON CONFLICT(feed_url) DO UPDATE SET
+        last_checked_at=datetime('now'),
+        last_status=excluded.last_status,
+        etag=COALESCE(excluded.etag, feed_sync_state.etag),
+        last_modified=COALESCE(excluded.last_modified, feed_sync_state.last_modified),
+        updated_at=datetime('now')
+    `);
+    this.stmtInsertSyncLog = this.db.prepare(`
+      INSERT INTO feed_sync_log(feed_url, status, from_cache, reason)
+      VALUES (?, ?, ?, ?)
+    `);
   }
 
   async addFeed(url, name) {
@@ -107,6 +123,22 @@ class RSSReader {
     this.feeds.push({ url: normalizedUrl, name: (name || normalizedUrl).trim() });
     this.stmtUpsertFeed.run(normalizedUrl, (name || '').trim());
     return true;
+  }
+
+  getCachedBody(url) {
+    const normalizedUrl = new URL(url).toString();
+    const cached = this.stmtGetCache.get(normalizedUrl);
+    return cached?.body ? cached.body : null;
+  }
+
+  logFeedSync(feedUrl, { status = null, fromCache = false, reason = null, etag = null, lastModified = null } = {}) {
+    this.stmtUpsertSyncState.run({
+      feed_url: feedUrl,
+      last_status: status,
+      etag,
+      last_modified: lastModified
+    });
+    this.stmtInsertSyncLog.run(feedUrl, status, fromCache ? 1 : 0, reason);
   }
 
   async fetchWithCache(url, kind) {
@@ -148,13 +180,46 @@ class RSSReader {
     }
   }
 
-  async parseFeed(url) {
+  async parseFeed(url, options = {}) {
     try {
+      const { force = false } = options;
+
       // in-memory short cache for UI bursts
       const cachedMem = this.cache.get(url);
-      if (cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) return cachedMem.data;
+      if (!force && cachedMem && Date.now() - cachedMem.timestamp < this.cacheExpiry) return cachedMem.data;
 
-      const { body } = await this.fetchWithCache(url, 'rss');
+      const minSyncIntervalMs = Number(process.env.OPENBOOK_FEED_MIN_SYNC_INTERVAL_MS || 120000);
+      const syncState = this.stmtGetSyncState.get(url);
+      if (!force && syncState?.last_checked_at) {
+        const ageMs = Date.now() - new Date(syncState.last_checked_at + 'Z').getTime();
+        if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < minSyncIntervalMs) {
+          const cachedBody = this.getCachedBody(url);
+          if (cachedBody) {
+            const xml = cachedBody.toString('utf-8');
+            const feed = await parser.parseString(xml);
+            const result = {
+              title: feed.title || 'Untitled Feed',
+              description: feed.description,
+              link: feed.link,
+              items: (feed.items || []).map(item => ({
+                title: item.title || 'Untitled',
+                link: item.link,
+                guid: item.guid,
+                pubDate: item.pubDate || item.isoDate,
+                content: item['content:encoded'] || item.content,
+                contentSnippet: item.contentSnippet,
+                author: item.author || item.creator,
+                feedUrl: url
+              }))
+            };
+            this.cache.set(url, { data: result, timestamp: Date.now() });
+            this.logFeedSync(url, { status: syncState.last_status || 200, fromCache: true, reason: 'min_interval_skip' });
+            return result;
+          }
+        }
+      }
+
+      const { body, status, fromCache } = await this.fetchWithCache(url, 'rss');
       const xml = body.toString('utf-8');
 
       // rss-parser can parseString to avoid duplicate network fetch
@@ -177,20 +242,31 @@ class RSSReader {
       };
 
       this.cache.set(url, { data: result, timestamp: Date.now() });
+
+      const cachedMeta = this.stmtGetCache.get(new URL(url).toString());
+      this.logFeedSync(url, {
+        status: status || 200,
+        fromCache: !!fromCache,
+        reason: fromCache ? 'cache_fallback' : 'network_fetch',
+        etag: cachedMeta?.etag || null,
+        lastModified: cachedMeta?.last_modified || null
+      });
+
       return result;
     } catch (error) {
+      this.logFeedSync(url, { status: error?.status || null, fromCache: false, reason: `error:${error.message}` });
       console.error(`Error parsing ${url}:`, error.message);
       return null;
     }
   }
 
-  async getAllArticles(limit = 50) {
+  async getAllArticles(limit = 50, options = {}) {
     const allArticles = [];
     const batchSize = 10;
 
     for (let i = 0; i < this.feeds.length; i += batchSize) {
       const batch = this.feeds.slice(i, i + batchSize);
-      const results = await Promise.all(batch.map(feed => this.parseFeed(feed.url)));
+      const results = await Promise.all(batch.map(feed => this.parseFeed(feed.url, options)));
 
       results.forEach((parsed, idx) => {
         if (!parsed) return;

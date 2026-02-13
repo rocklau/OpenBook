@@ -49,6 +49,27 @@ function migrate(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_fetch_cache_kind_time ON fetch_cache(kind, fetched_at);
 
+    CREATE TABLE IF NOT EXISTS feed_sync_state (
+      feed_url TEXT PRIMARY KEY,
+      last_checked_at TEXT,
+      last_status INTEGER,
+      etag TEXT,
+      last_modified TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(feed_url) REFERENCES feeds(url) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS feed_sync_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feed_url TEXT NOT NULL,
+      status INTEGER,
+      from_cache INTEGER NOT NULL DEFAULT 0,
+      reason TEXT,
+      fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(feed_url) REFERENCES feeds(url) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_feed_sync_log_feed_time ON feed_sync_log(feed_url, fetched_at DESC);
+
     CREATE TABLE IF NOT EXISTS articles (
       id TEXT PRIMARY KEY, -- stable hash (feed_url + guid/link)
       feed_url TEXT NOT NULL,
