@@ -1,56 +1,56 @@
-# Pretext 集成文档
+# Pretext Integration Documentation
 
-## 概述
+## Overview
 
-Pretext 是一个纯 JavaScript/TypeScript 库，用于多行文本测量和布局，避免使用 DOM 测量，而是使用 canvas 进行文本测量，提供更高效、准确的文本布局能力。
+Pretext is a pure JavaScript/TypeScript library for multiline text measurement and layout. It avoids using DOM measurements and instead uses canvas for text measurement, providing more efficient and accurate text layout capabilities.
 
-本文档介绍了 OpenBook 项目如何集成和使用 Pretext 库来优化文本布局和测量功能。
+This document describes how the OpenBook project integrates and uses the Pretext library to optimize text layout and measurement functionality.
 
-## 安装
+## Installation
 
-Pretext 已通过 npm 安装到项目中：
+Pretext has been installed to the project via npm:
 
 ```bash
 npm install @chenglou/pretext
 ```
 
-## 核心功能
+## Core Features
 
-### 1. 文本高度计算
+### 1. Text Height Calculation
 
-使用 Pretext 可以快速准确地计算文本在指定宽度和字体下的高度，避免了使用 DOM 测量带来的性能问题。
+Using Pretext allows for fast and accurate calculation of text height at a specified width and font, avoiding performance issues associated with DOM measurements.
 
-### 2. 多行文本布局
+### 2. Multi-line Text Layout
 
-Pretext 可以处理多行文本的布局，支持自动换行和行高计算，适用于响应式设计。
+Pretext can handle multi-line text layout, supporting automatic line wrapping and line height calculation, making it suitable for responsive designs.
 
-### 3. 性能优化
+### 3. Performance Optimization
 
-- 使用缓存机制避免重复计算
-- 使用防抖技术处理窗口 resize 事件
-- 减少 DOM 操作和重排
+- Uses caching mechanism to avoid redundant calculations
+- Uses debouncing technique to handle window resize events
+- Reduces DOM operations and reflows
 
-## 实现细节
+## Implementation Details
 
-### 1. 前端集成
+### 1. Frontend Integration
 
-Pretext 库通过以下方式集成到前端：
+The Pretext library is integrated into the frontend as follows:
 
-1. 在 `index.html` 中添加 Pretext 库的引用：
+1. Add Pretext library reference in `index.html`:
 
 ```html
 <script type="module">
-  // 导入 Pretext 库
+  // Import Pretext library
   import * as pretext from '../node_modules/@chenglou/pretext/dist/pretext.js';
-  // 将 Pretext 暴露到全局作用域
+  // Expose Pretext to global scope
   window.pretext = pretext;
 </script>
 ```
 
-2. 在 `lib/pretext.js` 中封装 Pretext 功能，提供简单的 API 接口：
+2. Encapsulate Pretext functionality in `lib/pretext.js` to provide a simple API interface:
 
 ```javascript
-// Pretext 工具函数封装
+// Pretext utility function encapsulation
 export function calculateTextHeight(text, font, maxWidth, lineHeight, options = {}) {
   const prepared = prepareText(text, font, options);
   const { height } = layoutText(prepared, maxWidth, lineHeight);
@@ -58,78 +58,78 @@ export function calculateTextHeight(text, font, maxWidth, lineHeight, options = 
 }
 ```
 
-### 2. 应用场景
+### 2. Application Scenarios
 
-#### 2.1 文章列表标题
+#### 2.1 Article List Titles
 
-在 `reader.js` 中使用 Pretext 计算文章标题的行数，根据行数调整标题样式：
+Use Pretext in `reader.js` to calculate the number of lines for article titles and adjust title styles based on line count:
 
 ```javascript
 function calculateTitleLines(title, maxWidth) {
-  // 生成缓存键
+  // Generate cache key
   const cacheKey = `${title}|${maxWidth}`;
   
-  // 检查缓存
+  // Check cache
   if (titleCache.has(cacheKey)) {
     return titleCache.get(cacheKey);
   }
   
   try {
-    // 使用 Pretext 计算标题行数
+    // Use Pretext to calculate title lines
     const prepared = window.pretext.prepare(title, '0.95rem var(--font-serif)');
     const { lineCount } = window.pretext.layout(prepared, maxWidth, 1);
     
-    // 缓存结果
+    // Cache result
     titleCache.set(cacheKey, lineCount);
     return lineCount;
   } catch (e) {
-    // 降级到默认行为
+    // Fallback to default behavior
     return 2;
   }
 }
 ```
 
-#### 2.2 笔记卡片高度
+#### 2.2 Note Card Height
 
-在 `notes.js` 中使用 Pretext 计算笔记卡片的高度，确保瀑布流布局的一致性：
+Use Pretext in `notes.js` to calculate note card heights, ensuring consistency in masonry layout:
 
 ```javascript
 function calculateNoteHeight(title, desc, maxWidth) {
-  // 生成缓存键
+  // Generate cache key
   const cacheKey = `${title}|${desc}|${maxWidth}`;
   
-  // 检查缓存
+  // Check cache
   if (noteCache.has(cacheKey)) {
     return noteCache.get(cacheKey);
   }
   
   try {
-    // 使用 Pretext 计算标题和描述的高度
+    // Use Pretext to calculate title and description heights
     const titlePrepared = window.pretext.prepare(title, '1rem var(--font-serif)');
     const descPrepared = window.pretext.prepare(desc, '0.9rem var(--font-serif)');
     
     const titleHeight = window.pretext.layout(titlePrepared, maxWidth, 1.4).height;
     const descHeight = window.pretext.layout(descPrepared, maxWidth, 1.6).height;
     
-    // 计算总高度（加上其他元素的高度）
-    const totalHeight = titleHeight + descHeight + 120; // 120px 是其他元素的高度
+    // Calculate total height (plus height of other elements)
+    const totalHeight = titleHeight + descHeight + 120; // 120px is the height of other elements
     
-    // 缓存结果
+    // Cache result
     noteCache.set(cacheKey, totalHeight);
     return totalHeight;
   } catch (e) {
-    // 降级到默认行为
+    // Fallback to default behavior
     return 200;
   }
 }
 ```
 
-### 3. 响应式设计
+### 3. Responsive Design
 
-添加了窗口 resize 事件监听器，确保在不同设备尺寸下 Pretext 的布局计算能够正确适应：
+Added window resize event listener to ensure Pretext layout calculations correctly adapt to different device sizes:
 
 ```javascript
-// 防抖函数
+// Debounce function
 function debounce(func, wait) {
   let timeout;
   return function() {
@@ -140,50 +140,50 @@ function debounce(func, wait) {
   };
 }
 
-// 窗口 resize 事件处理
+// Window resize event handler
 function handleResize() {
-  // 清空缓存，以便重新计算布局
+  // Clear cache to recalculate layout
   titleCache.clear();
   
-  // 重新渲染文章列表
+  // Re-render article list
   if (currentArticles) {
     renderArticleList(currentArticles);
   }
 }
 
-// 添加防抖处理的 resize 事件监听器
+// Add debounced resize event listener
 window.addEventListener('resize', debounce(handleResize, 200));
 ```
 
-## 性能测试
+## Performance Testing
 
-### 测试结果
+### Test Results
 
-Pretext 与传统 DOM 测量方法的性能比较：
+Performance comparison between Pretext and traditional DOM measurement methods:
 
-| 测试场景 | Pretext 时间 | DOM 测量时间 | 速度提升 |
-|---------|------------|------------|--------|
-| 1000 次迭代，10 条文本 | ~50ms | ~200ms | 4x  faster |
-| 平均每条文本 | ~0.005ms | ~0.02ms | 4x  faster |
+| Test Scenario | Pretext Time | DOM Measurement Time | Speed Improvement |
+|--------------|-------------|---------------------|-------------------|
+| 1000 iterations, 10 texts | ~50ms | ~200ms | 4x faster |
+| Average per text | ~0.005ms | ~0.02ms | 4x faster |
 
-### 测试说明
+### Test Description
 
-测试使用 `performance_test.html` 文件，包含三个测试场景：
+Testing uses the `performance_test.html` file, which includes three test scenarios:
 
-1. Pretext 性能测试：测量使用 Pretext 进行文本布局的时间
-2. DOM 测量性能测试：测量使用 DOM 方法进行文本测量的时间
-3. 比较测试：比较 Pretext 与 DOM 测量的性能差异
+1. Pretext performance test: Measures the time to perform text layout using Pretext
+2. DOM measurement performance test: Measures the time to perform text measurement using DOM methods
+3. Comparison test: Compares the performance difference between Pretext and DOM measurement
 
-## 注意事项
+## Notes
 
-1. **浏览器兼容性**：Pretext 依赖于 canvas API 和 Intl.Segmenter，确保在目标浏览器中支持这些特性。
+1. **Browser Compatibility**: Pretext depends on canvas API and Intl.Segmenter, ensure these features are supported in target browsers.
 
-2. **字体同步**：确保传递给 Pretext 的字体样式与 CSS 中使用的字体样式一致，以获得准确的测量结果。
+2. **Font Synchronization**: Ensure the font styles passed to Pretext match those used in CSS to obtain accurate measurement results.
 
-3. **缓存管理**：合理使用缓存机制，避免重复计算，特别是在处理大量文本时。
+3. **Cache Management**: Use caching mechanism appropriately to avoid redundant calculations, especially when processing large amounts of text.
 
-4. **降级处理**：添加错误处理，当 Pretext 不可用时，降级到传统的 DOM 测量方法。
+4. **Fallback Handling**: Add error handling to fall back to traditional DOM measurement methods when Pretext is not available.
 
-## 结论
+## Conclusion
 
-将 Pretext 库集成到 OpenBook 项目中，可以显著提升文本布局的性能和准确性，改善用户阅读体验。通过合理的缓存策略和错误处理，可以在保持现有功能的基础上，为 OpenBook 增加更强大的文本布局能力。
+Integrating the Pretext library into the OpenBook project can significantly improve the performance and accuracy of text layout, enhancing the user reading experience. Through reasonable caching strategies and error handling, we can add more powerful text layout capabilities to OpenBook while maintaining existing functionality.
