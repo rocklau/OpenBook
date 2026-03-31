@@ -77,14 +77,47 @@ function changeDate(delta) {
   loadArticlesByDate(currentDate);
 }
 
+// 缓存文章标题的准备结果
+const titleCache = new Map();
+
+function calculateTitleLines(title, maxWidth) {
+  // 生成缓存键
+  const cacheKey = `${title}|${maxWidth}`;
+  
+  // 检查缓存
+  if (titleCache.has(cacheKey)) {
+    return titleCache.get(cacheKey);
+  }
+  
+  try {
+    // 使用 Pretext 计算标题行数
+    const prepared = window.pretext.prepare(title, '0.95rem var(--font-serif)');
+    const { lineCount } = window.pretext.layout(prepared, maxWidth, 1);
+    
+    // 缓存结果
+    titleCache.set(cacheKey, lineCount);
+    return lineCount;
+  } catch (e) {
+    // 降级到默认行为
+    return 2;
+  }
+}
+
 function renderArticleList(items) {
   const list = document.getElementById('articleList');
-  list.innerHTML = items.map((item, i) => `
-    <li class="article-item ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${i}, this)">
-      <div class="article-item-title">${item.title}</div>
-      <div class="article-item-meta"><span>${item.feedName || ''}</span></div>
-    </li>
-  `).join('');
+  const itemWidth = list.clientWidth - 60; // 减去 padding
+  
+  list.innerHTML = items.map((item, i) => {
+    const lineCount = calculateTitleLines(item.title, itemWidth);
+    const titleClass = lineCount > 2 ? 'article-item-title long-title' : 'article-item-title';
+    
+    return `
+      <li class="article-item ${item.isRead ? 'is-read' : ''}" onclick="selectArticle(${i}, this)">
+        <div class="${titleClass}">${item.title}</div>
+        <div class="article-item-meta"><span>${item.feedName || ''}</span></div>
+      </li>
+    `;
+  }).join('');
 }
 
 function selectArticle(index, el) {
@@ -109,6 +142,31 @@ function closeArticle() {
   document.getElementById('contentCol').classList.remove('active');
   document.body.classList.remove('body-has-selection');
 }
+
+// 防抖函数
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+// 窗口 resize 事件处理
+function handleResize() {
+  // 清空缓存，以便重新计算布局
+  titleCache.clear();
+  
+  // 重新渲染文章列表
+  if (currentArticles) {
+    renderArticleList(currentArticles);
+  }
+}
+
+// 添加防抖处理的 resize 事件监听器
+window.addEventListener('resize', debounce(handleResize, 200));
 
 function renderArticleContent(article) {
   const col = document.getElementById('contentCol');

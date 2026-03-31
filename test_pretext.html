@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pretext Test</title>
+  <script type="module">
+    // 导入 Pretext 库
+    import * as pretext from './node_modules/@chenglou/pretext/dist/pretext.js';
+    // 将 Pretext 暴露到全局作用域
+    window.pretext = pretext;
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    h2 { margin-top: 0; }
+    .result { margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Pretext Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Basic Text Measurement</h2>
+    <p>Text: "Hello, world! This is a test of Pretext library."</p>
+    <p>Font: "16px Arial"</p>
+    <p>Max Width: 300px</p>
+    <p>Line Height: 24px</p>
+    <button onclick="runTest1()">Run Test</button>
+    <div id="test1Result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Multi-line Text</h2>
+    <p>Text: "This is a longer text that should wrap to multiple lines. It demonstrates Pretext's ability to handle line breaks and calculate the correct height."</p>
+    <p>Font: "18px Georgia"</p>
+    <p>Max Width: 400px</p>
+    <p>Line Height: 28px</p>
+    <button onclick="runTest2()">Run Test</button>
+    <div id="test2Result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: CJK Text</h2>
+    <p>Text: "你好，世界！这是一个测试，展示 Pretext 如何处理中文文本。"</p>
+    <p>Font: "16px SimSun"</p>
+    <p>Max Width: 300px</p>
+    <p>Line Height: 24px</p>
+    <button onclick="runTest3()">Run Test</button>
+    <div id="test3Result" class="result"></div>
+  </div>
+  
+  <script>
+    function runTest1() {
+      const text = "Hello, world! This is a test of Pretext library.";
+      const font = "16px Arial";
+      const maxWidth = 300;
+      const lineHeight = 24;
+      
+      const prepared = window.pretext.prepare(text, font);
+      const result = window.pretext.layout(prepared, maxWidth, lineHeight);
+      
+      document.getElementById('test1Result').innerHTML = `
+        <strong>Result:</strong><br>
+        Line Count: ${result.lineCount}<br>
+        Height: ${result.height}px
+      `;
+    }
+    
+    function runTest2() {
+      const text = "This is a longer text that should wrap to multiple lines. It demonstrates Pretext's ability to handle line breaks and calculate the correct height.";
+      const font = "18px Georgia";
+      const maxWidth = 400;
+      const lineHeight = 28;
+      
+      const prepared = window.pretext.prepare(text, font);
+      const result = window.pretext.layout(prepared, maxWidth, lineHeight);
+      
+      document.getElementById('test2Result').innerHTML = `
+        <strong>Result:</strong><br>
+        Line Count: ${result.lineCount}<br>
+        Height: ${result.height}px
+      `;
+    }
+    
+    function runTest3() {
+      const text = "你好，世界！这是一个测试，展示 Pretext 如何处理中文文本。";
+      const font = "16px SimSun";
+      const maxWidth = 300;
+      const lineHeight = 24;
+      
+      const prepared = window.pretext.prepare(text, font);
+      const result = window.pretext.layout(prepared, maxWidth, lineHeight);
+      
+      document.getElementById('test3Result').innerHTML = `
+        <strong>Result:</strong><br>
+        Line Count: ${result.lineCount}<br>
+        Height: ${result.height}px
+      `;
+    }
+  </script>
+</body>
+</html>

@@ -55,6 +55,38 @@ async function loadMoreNotes() {
     const items = data.items || [];
     const wf = document.getElementById('notesWaterfall');
 
+    // 缓存笔记内容的准备结果
+    const noteCache = new Map();
+    
+    function calculateNoteHeight(title, desc, maxWidth) {
+      // 生成缓存键
+      const cacheKey = `${title}|${desc}|${maxWidth}`;
+      
+      // 检查缓存
+      if (noteCache.has(cacheKey)) {
+        return noteCache.get(cacheKey);
+      }
+      
+      try {
+        // 使用 Pretext 计算标题和描述的高度
+        const titlePrepared = window.pretext.prepare(title, '1rem var(--font-serif)');
+        const descPrepared = window.pretext.prepare(desc, '0.9rem var(--font-serif)');
+        
+        const titleHeight = window.pretext.layout(titlePrepared, maxWidth, 1.4).height;
+        const descHeight = window.pretext.layout(descPrepared, maxWidth, 1.6).height;
+        
+        // 计算总高度（加上其他元素的高度）
+        const totalHeight = titleHeight + descHeight + 120; // 120px 是其他元素的高度
+        
+        // 缓存结果
+        noteCache.set(cacheKey, totalHeight);
+        return totalHeight;
+      } catch (e) {
+        // 降级到默认行为
+        return 200;
+      }
+    }
+
     items.forEach(it => {
       const p = it.payload || {};
       if (it.type === 'materialize') return;
@@ -71,6 +103,12 @@ async function loadMoreNotes() {
 
       const card = document.createElement('div');
       card.className = 'note-card';
+      
+      // 计算卡片高度
+      const cardWidth = 300; // 卡片的大致宽度
+      const cardHeight = calculateNoteHeight(title, desc, cardWidth);
+      card.style.minHeight = `${cardHeight}px`;
+      
       card.innerHTML = `
         <div class="meta"><span class="type">${displayType}</span><span>${new Date(it.createdAt).toLocaleDateString()}</span></div>
         <div class="title">${title}</div>
@@ -118,3 +156,25 @@ async function toggleFavoriteCurrent() {
   await apiPost('/api/article/state', { articleId: mat.articleId, isFavorite: true });
   showToast('Favorited');
 }
+
+// 防抖函数
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+// 窗口 resize 事件处理
+function handleResize() {
+  // 重新加载笔记，以便重新计算布局
+  if (document.body.classList.contains('body-view-notes')) {
+    refreshNotes();
+  }
+}
+
+// 添加防抖处理的 resize 事件监听器
+window.addEventListener('resize', debounce(handleResize, 200));

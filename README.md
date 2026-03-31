@@ -182,6 +182,7 @@ node --test test/integration.test.js # Integration tests only
 - **RSS**: `rss-parser`
 - **Markdown**: `turndown`
 - **Frontend**: Vanilla JavaScript (ES6+), CSS Grid/Flexbox
+- **Text Layout**: `@chenglou/pretext` (for efficient text measurement and layout)
 
 ## API
 
